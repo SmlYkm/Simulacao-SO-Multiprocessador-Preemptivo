@@ -1,10 +1,15 @@
+package com.example.ui; // Added a named package
+
 import javax.swing.JButton;
 import javax.swing.JFrame;
-//askjdhfaçlksdfh
+import javax.swing.WindowConstants; // Imported WindowConstants
+
 public class WindowWithButton {
     public static void main(String[] args) {
         JFrame frame = new JFrame("Window with Button");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        
+        // Updated to use static access from WindowConstants
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setSize(300, 200);
 
         JButton button = new JButton("Click Me");
