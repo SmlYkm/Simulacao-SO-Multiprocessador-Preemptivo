@@ -14,7 +14,9 @@ public class Window extends JFrame {
     
     private int currentTime = 0;
     private GanttPanel ganttPanel;
-    private List<Object> tasksHistory = new ArrayList<>(); // Substituir Object por TCB/Tarefa
+    
+    // Lista tipada corretamente com 'Tarefa'
+    private List<Tarefa> tasksHistory = new ArrayList<>(); 
 
     public Window(String title) {
         setTitle(title);
@@ -29,6 +31,9 @@ public class Window extends JFrame {
         JButton btnImport   = new JButton("Importar Config");
         JButton btnStep     = new JButton("Próximo Passo (>)");
         
+        // Ação do botão para avançar o tempo
+        btnStep.addActionListener(e -> incrementTime());
+
         controlPanel.add(btnAdd);
         controlPanel.add(btnCPU);
         controlPanel.add(btnImport);
@@ -58,10 +63,17 @@ public class Window extends JFrame {
         setLocationRelativeTo(null);
     }
 
-    
+    // Método para injetar tarefas e atualizar a tela
+    public void addTask(Tarefa t) {
+        tasksHistory.add(t);
+        ganttPanel.revalidate(); 
+        ganttPanel.repaint();
+    }
+
     // Abre menu para modificar atributos
     private void openTaskOptions(int taskIndex) {
-        JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + taskIndex);
+        Tarefa t = tasksHistory.get(taskIndex);
+        JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + t.getId());
         menu.add(new JMenuItem("Alterar Prioridade"));
         menu.add(new JMenuItem("Suspender Tarefa"));
         menu.add(new JMenuItem("Forçar Execução"));
@@ -70,6 +82,7 @@ public class Window extends JFrame {
 
     public void incrementTime() {
         ++currentTime;
+        ganttPanel.revalidate();
         ganttPanel.repaint();
     }
 
@@ -84,7 +97,7 @@ public class Window extends JFrame {
             // O gráfico cresce para a direita conforme o tempo passa
             int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100;
             int height = (tasksHistory.size() * ROW_HEIGHT) + 100;
-            return new Dimension(width, height);
+            return new Dimension(Math.max(width, getParent().getWidth()), height);
         }
 
         @Override
@@ -112,12 +125,20 @@ public class Window extends JFrame {
 
             for (int i = 0; i < tasksHistory.size(); i++) {
                 int y = 30 + (i * ROW_HEIGHT);
-                g2.drawString("Tarefa T" + i, 15, y + 25);
+                Tarefa t = tasksHistory.get(i);
+                
+                g2.drawString("Tarefa T" + t.getId(), 15, y + 25);
                 g2.drawLine(0, y + ROW_HEIGHT, getWidth(), y + ROW_HEIGHT);
                 
-                // Exemplo de desenho de bloco
-                // g2.setColor(Color.BLUE);
-                // g2.fillRect(LABEL_WIDTH + (startTick * TICK_WIDTH), y + 5, duration * TICK_WIDTH, 30);
+                // Desenho do bloco da tarefa (Simulação de execução visual)
+                int startTick = t.getTempoChegada();
+                int duration = t.getTempoExecucao();
+                int tempoVisivel = Math.min(duration, Math.max(0, currentTime - startTick));
+                
+                if (tempoVisivel > 0) {
+                    g2.setColor(Color.DARK_GRAY);
+                    g2.fillRect(LABEL_WIDTH + (startTick * TICK_WIDTH), y + 5, tempoVisivel * TICK_WIDTH, 30);
+                }
             }
         }
     }
