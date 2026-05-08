@@ -2,7 +2,7 @@ abstract class Evento {
     private int tempoChegada;
     private int tempoExecucao;
 
-    public EventoInterrupcao(int tempoChegada, int tempoExecucao) {
+    protected Evento(int tempoChegada, int tempoExecucao) {
         this.tempoChegada = tempoChegada;
         this.tempoExecucao = tempoExecucao;
     }

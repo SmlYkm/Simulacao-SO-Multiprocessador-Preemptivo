@@ -1,5 +1,7 @@
+package com.SOMP;
 import java.util.ArrayList;
 import java.util.List;
+
 
 
 public class Tarefa {
@@ -12,7 +14,7 @@ public class Tarefa {
     private boolean finalizada;
     private String cor;
 
-    private List<Evento> eventos;
+    private ArrayList<Evento> eventos;
 
     public Tarefa(int id, int prioridade, int tempoExecucao, int tempoChegada, String cor) {
         this.id = id;
