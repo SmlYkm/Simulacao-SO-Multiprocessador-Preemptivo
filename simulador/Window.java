@@ -1,4 +1,4 @@
-package ui;
+package simulador;
 
 import javax.swing.*;
 import java.awt.*;
