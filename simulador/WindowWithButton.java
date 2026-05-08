@@ -1,3 +1,4 @@
+package simulador;
 
 
 import javax.swing.JButton;

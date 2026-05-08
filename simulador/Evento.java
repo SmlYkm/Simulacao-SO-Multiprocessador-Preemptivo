@@ -1,3 +1,4 @@
+package simulador;
 abstract class Evento {
     private int tempoChegada;
     private int tempoExecucao;
