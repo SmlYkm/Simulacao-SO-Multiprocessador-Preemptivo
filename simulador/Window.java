@@ -15,24 +15,29 @@ public class Window extends JFrame {
     private int currentTime = 0;
     private GanttPanel ganttPanel;
     
-    // Lista tipada corretamente com 'Tarefa'
     private List<Tarefa> tasksHistory = new ArrayList<>(); 
+    private SOMP sistema;
 
-    public Window(String title) {
+    public Window(String title, SOMP sistema) {
         setTitle(title);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 600);
         setLayout(new BorderLayout());
 
+        this.sistema = sistema;
+
         // Painel Superior: Opções Globais
-        JPanel controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton btnAdd      = new JButton("Adicionar Tarefa");
-        JButton btnCPU      = new JButton("Config. CPUs");
-        JButton btnImport   = new JButton("Importar Config");
-        JButton btnStep     = new JButton("Próximo Passo (>)");
+        JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton btnAdd       = new JButton("Adicionar Tarefa");
+        JButton btnCPU       = new JButton("Config. CPUs");
+        JButton btnImport    = new JButton("Importar Config");
+        JButton btnStep      = new JButton("Próximo Passo (>)");
         
         // Ação do botão para avançar o tempo
-        btnStep.addActionListener(e -> incrementTime());
+        btnStep.addActionListener(e -> {
+            this.sistema.executar(); // SO calcula o tick
+            incrementTime();         // Interface avança o desenho
+        });
 
         controlPanel.add(btnAdd);
         controlPanel.add(btnCPU);

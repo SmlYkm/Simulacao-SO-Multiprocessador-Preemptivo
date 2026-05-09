@@ -6,7 +6,7 @@ public class EscalonadorSRTF extends Escalonador {
     public void executar(Processador[] cpus) {
         for (Processador cpu : cpus) {
             if (cpu.idle() && !tarefas.isEmpty()) {
-                Tarefa tempTarefa = tarefas.removeFirst();
+                Tarefa tempTarefa = tarefas.remove(0);
                 cpu.setTarefaAtual(tempTarefa);
             }
         }

@@ -12,7 +12,7 @@ public abstract class Escalonador {
     
     // Coloca tarefa no final da fila
     public void adicionarTarefa(Tarefa tarefa) {
-        tarefas.addLast(tarefa);
+        tarefas.add(tarefa);
     }
 
     // Executa 1 tick, recebe lista de processadores e ve quem fica com qual tarefa

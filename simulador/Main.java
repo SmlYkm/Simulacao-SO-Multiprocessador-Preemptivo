@@ -9,7 +9,7 @@ public class Main {
 
         if (sistema != null) {
             // 2. Inicializa a interface principal
-            Window window = new Window("Simulador de Escalonamento MP");
+            Window window = new Window("Simulador de Escalonamento MP", sistema);
 
             // 3. Pega nas tarefas que o Leitor colocou no SOMP e envia para a Janela
             for (Tarefa t : sistema.getListaTarefasGeral()) {
