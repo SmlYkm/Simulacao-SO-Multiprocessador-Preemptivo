@@ -9,7 +9,7 @@ public class SOMP {
     private Processador[] processadores;
     private int tempoAtual;
 
-    private List<Tarefa> listaTarefasGeral;
+    private ArrayList<Tarefa> listaTarefasGeral;
 
 
     public SOMP(Escalonador escalonador, int numProcessadores) {
@@ -33,7 +33,13 @@ public class SOMP {
         return listaTarefasGeral;
     }
 
+    // Execução de 1 tick
     public void executar() {
-        // Lógica de execução do simulador
+        for (Processador proc : processadores) {
+            proc.executar();    // Execução de 1 tick
+            if (proc.idle()) {  // Pegar proxima tarefa (ou não)
+                
+            }
+        }
     }
 }
