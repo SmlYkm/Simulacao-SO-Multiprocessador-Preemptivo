@@ -1,4 +1,4 @@
 package simulador;
-public class EscalonadorSRTF {
+public class EscalonadorSRTF implements Escalonador {
     // Class implementation goes here
 }

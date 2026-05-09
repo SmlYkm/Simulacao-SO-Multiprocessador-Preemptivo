@@ -17,15 +17,18 @@ public class Tarefa {
 
     private ArrayList<Evento> eventos;
 
-    public Tarefa(int id, int prioridade, int tempoExecucao, int tempoChegada, String cor) {
+    public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridade, List<Evento> lista_eventos) {
         this.id = id;
-        this.prioridade = prioridade;
+        this.tempoChegada = tempoChegada;
         this.tempoExecucao = tempoExecucao;
         this.tempoRestante = tempoExecucao;
-        this.tempoChegada = tempoChegada;
+        this.prioridade = prioridade;
         this.finalizada = false;
-        this.cor = cor;
+        this.cor =  "#" + cor;
         this.eventos = new ArrayList<>();
+        if (lista_eventos != null) {
+            this.eventos.addAll(lista_eventos);
+        }
     }
 
     // Getters e setters

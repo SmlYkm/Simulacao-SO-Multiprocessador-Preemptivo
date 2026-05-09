@@ -2,21 +2,26 @@ package simulador;
 
 public class Main {
     public static void main(String[] args) {
-        // Inicializa a interface principal do simulador
-        Window window = new Window("Simulador de Escalonamento MP");
+        
+        // 1. O Leitor lê o ficheiro txt e constrói o SOMP inteiro
+        // (Certifica-te que crias um ficheiro chamado "config.txt" na pasta do teu projeto)
+        SOMP sistema = LeitorConfig.carregarSimulacao("config.txt");
 
-        // Cria algumas tarefas de teste para visualizar no gráfico
-        // Construtor: id, prioridade, tempoExecucao, tempoChegada, cor
-        Tarefa t0 = new Tarefa(0, 1, 5, 0, "RED");
-        Tarefa t1 = new Tarefa(1, 2, 8, 2, "BLUE");
-        Tarefa t2 = new Tarefa(2, 1, 4, 6, "GREEN");
+        if (sistema != null) {
+            // 2. Inicializa a interface principal
+            Window window = new Window("Simulador de Escalonamento MP");
 
-        // Adiciona as tarefas à janela
-        window.addTask(t0);
-        window.addTask(t1);
-        window.addTask(t2);
+            // 3. Pega nas tarefas que o Leitor colocou no SOMP e envia para a Janela
+            for (Tarefa t : sistema.getListaTarefasGeral()) {
+                window.addTask(t);
+            }
 
-        // Exibe a janela
-        window.showWindow();
+            // Exibe a janela
+            window.showWindow();
+            
+            // sistema.executar(); // Mais tarde irás chamar isto para iniciar a simulação real
+        } else {
+            System.out.println("Falha ao inicializar o sistema. Verifica o ficheiro de configuração.");
+        }
     }
 }
