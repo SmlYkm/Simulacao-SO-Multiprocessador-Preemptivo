@@ -4,12 +4,17 @@ import java.util.ArrayList;
 // import simulador.Tarefa;
 
 public abstract class Escalonador {
-    protected ArrayList<Tarefa> listaTarefas;
+    protected ArrayList<Tarefa> tarefas;
 
     public Escalonador () {
-        listaTarefas = new ArrayList<>();
+        tarefas = new ArrayList<>();
     }
     
-    public abstract void adicionarTarefa(Tarefa novaTarefa);
-    public abstract void executar();  // Executa 1 tick
+    // Coloca tarefa no final da fila
+    public void adicionarTarefa(Tarefa tarefa) {
+        tarefas.addLast(tarefa);
+    }
+
+    // Executa 1 tick, recebe lista de processadores e ve quem fica com qual tarefa
+    public abstract void executar(Processador[] cpus);
 }

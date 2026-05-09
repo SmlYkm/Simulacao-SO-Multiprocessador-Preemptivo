@@ -35,10 +35,45 @@ public class SOMP {
 
     // Execução de 1 tick
     public void executar() {
-        for (Processador proc : processadores) {
-            proc.executar();    // Execução de 1 tick
-            if (proc.idle()) {  // Pegar proxima tarefa (ou não)
-                
+        for (Tarefa tarefa : listaTarefasGeral) {  // Coloca tarefas que chegaram agora no escalonador
+            if (tarefa.getTempoChegada() == tempoAtual)
+                escalonador.adicionarTarefa(tarefa);
+        }
+
+        escalonador.executar(processadores);       // Escalonador executa seu algoritmo
+
+        for (Processador cpu : processadores) {    // Executa 1 tick por processador
+            cpu.executar();                       
+        }
+        gravarHistorico();
+        ++tempoAtual;
+    }
+
+    private void gravarHistorico() {
+        for (Tarefa tarefa : listaTarefasGeral) {
+            if (tarefa.isFinalizada()) {  // Terminou
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1);
+                continue;
+            } else if (tarefa.getTempoChegada() > tempoAtual) {  // Tarefa ainda não foi criada
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1);
+                continue;
+            }
+
+            int cpuId = -1;  // Descobre se a tarefa está em alguma cpu
+            for (Processador proc : processadores) {
+                if (
+                    proc.getTarefaAtual()         != null && 
+                    proc.getTarefaAtual().getId() == tarefa.getId()
+                ) {
+                    cpuId = proc.getId();
+                    break;
+                }
+            }
+
+            if (cpuId != -1) {  // Ta rodando em algum lugar
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Executando, cpuId);
+            } else {            // Não ta rodando, mas já chegou e não terminou -> está Suspenso
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1);
             }
         }
     }

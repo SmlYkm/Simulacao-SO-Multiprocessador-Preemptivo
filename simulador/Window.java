@@ -42,7 +42,7 @@ public class Window extends JFrame {
         add(controlPanel, BorderLayout.NORTH);
 
         // Gráfico de Gantt
-        ganttPanel = new GanttPanel();
+        ganttPanel             = new GanttPanel();
         JScrollPane scrollPane = new JScrollPane(ganttPanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         add(scrollPane, BorderLayout.CENTER);
@@ -53,9 +53,8 @@ public class Window extends JFrame {
             public void mouseClicked(MouseEvent e) {
                 if (e.getX() <= LABEL_WIDTH) {
                     int taskIndex = (e.getY() - 30) / ROW_HEIGHT; // 30px
-                    if (taskIndex >= 0 && taskIndex < tasksHistory.size()) {
+                    if (taskIndex >= 0 && taskIndex < tasksHistory.size())
                         openTaskOptions(taskIndex);
-                    }
                 }
             }
         });
@@ -97,7 +96,10 @@ public class Window extends JFrame {
             // O gráfico cresce para a direita conforme o tempo passa
             int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100;
             int height = (tasksHistory.size() * ROW_HEIGHT) + 100;
-            return new Dimension(Math.max(width, getParent().getWidth()), height);
+            return new Dimension(
+                Math.max(width, getParent().getWidth()), 
+                height
+            );
         }
 
         @Override
@@ -108,39 +110,68 @@ public class Window extends JFrame {
 
             // Desenhar Linhas de grade e header de tempo
             g2.setColor(new Color(230, 230, 230));
-            for (int t = 0; t <= currentTime; t++) {
+            for (int t = 0; t <= currentTime; ++t) {
                 int x = LABEL_WIDTH + (t * TICK_WIDTH);
+                
                 g2.drawLine(x, 0, x, getHeight());
                 g2.setColor(Color.DARK_GRAY);
-                if (t % 5 == 0) 
+                
+                if (t % 5 == 0)
                     g2.drawString(String.valueOf(t), x - 5, 20);
+                
                 g2.setColor(new Color(230, 230, 230));
             }
 
-            // Coluna Esquerda = nome das tarefas
+            // Coluna Esquerda = nome das tarefas e fundo
             g2.setColor(new Color(245, 245, 245));
             g2.fillRect(0, 0, LABEL_WIDTH, getHeight());
             g2.setColor(Color.BLACK);
             g2.drawLine(LABEL_WIDTH, 0, LABEL_WIDTH, getHeight());
 
-            for (int i = 0; i < tasksHistory.size(); i++) {
+            for (int i = 0; i < tasksHistory.size(); ++i) {
                 int y = 30 + (i * ROW_HEIGHT);
                 Tarefa t = tasksHistory.get(i);
                 
+                // Desenha o nome da tarefa
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font("Arial", Font.PLAIN, 12));
                 g2.drawString("Tarefa T" + t.getId(), 15, y + 25);
+                
+                // Desenha a linha separadora horizontal
+                g2.setColor(new Color(220, 220, 220));
                 g2.drawLine(0, y + ROW_HEIGHT, getWidth(), y + ROW_HEIGHT);
                 
-                // Desenho do bloco da tarefa (Simulação de execução visual)
-                int startTick = t.getTempoChegada();
-                int duration = t.getTempoExecucao();
-                int tempoVisivel = Math.min(duration, Math.max(0, currentTime - startTick));
-                
-                if (tempoVisivel > 0) {
-                    g2.setColor(Color.DARK_GRAY);
-                    g2.fillRect(LABEL_WIDTH + (startTick * TICK_WIDTH), y + 5, tempoVisivel * TICK_WIDTH, 30);
+                // Desenho do bloco da tarefa tick a tick pelo histórico
+                for (int tick = 0; tick < currentTime; ++tick) {
+                    Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tick);
+                    int x = LABEL_WIDTH + (tick * TICK_WIDTH);
+
+                    if (reg.estado == Tarefa.Estado.Executando) {
+                        // Desenha o bloco com a cor customizada da tarefa
+                        g2.setColor(Color.decode(t.getCor()));
+                        g2.fillRect(x, y + 5, TICK_WIDTH, 30);
+                        
+                        // Escreve o ID do processador por cima do bloco
+                        g2.setColor(Color.WHITE); // Texto branco para contraste
+                        g2.setFont(new Font("Arial", Font.BOLD, 12));
+                        g2.drawString("P" + reg.cpuId, x + 5, y + 25);
+                        
+                    } else if (reg.estado == Tarefa.Estado.Suspenso) {
+                        // Tarefa suspensa = Bloco Preto
+                        g2.setColor(Color.BLACK);
+                        g2.fillRect(x, y + 5, TICK_WIDTH, 30);
+                        
+                    } else if (reg.estado == Tarefa.Estado.Esperando) {
+                        // Tarefa na fila de prontos = Ausência de cor (apenas borda cinza clara)
+                        g2.setColor(new Color(200, 200, 200));
+                        g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
+                    }
+                    
+                    // Se o estado for NaoCriada ou Finalizado, a tela não desenha nada
                 }
             }
         }
+
     }
 
     public void showWindow() { 

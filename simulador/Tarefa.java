@@ -2,8 +2,7 @@ package simulador;
 
 import java.util.ArrayList;
 import java.util.List;
-
-
+// import java.awt.Color; 
 
 public class Tarefa {
 
@@ -15,7 +14,29 @@ public class Tarefa {
     private boolean finalizada;
     private String cor;
 
-    private ArrayList<Evento> eventos;
+    private List<Evento>       eventos;
+    private List<TickSnapshot> historico;
+
+    public enum Estado {
+        NaoCriada,  // SO ainda não recebeu a tarefa
+        Esperando,  // SO recebeu tarefa e esta esperando para ser executada
+        Executando, 
+        Suspenso,   
+        Finalizado    
+    }
+
+    // Storage class para agregar estado e cpu de execução em dado tempo
+    // Usado para manter um histórico de execução
+    public class TickSnapshot { 
+        public Estado estado;
+        public int    cpuId;
+
+        public TickSnapshot(Estado estado, int cpuId) {
+            this.estado = estado;
+            this.cpuId  = cpuId;
+        }
+    }
+
 
     public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridade, List<Evento> lista_eventos) {
         this.id = id;
@@ -29,6 +50,7 @@ public class Tarefa {
         if (lista_eventos != null) {
             this.eventos.addAll(lista_eventos);
         }
+        this.historico = new ArrayList<>();
     }
 
     // Getters e setters
@@ -47,6 +69,23 @@ public class Tarefa {
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }
 
+    // Método para o SOMP gravar o que aconteceu neste tick
+    public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
+        // Preenche buracos se o tempo der saltos (segurança)
+        while (historico.size() <= tempoAtual) {
+            historico.add(
+                new TickSnapshot(Estado.NaoCriada, -1)
+            );
+        }
+        historico.set(tempoAtual, new TickSnapshot(estado, cpuId));
+    }
+
+    public TickSnapshot getRegistroNoTempo(int tempo) {
+        if (tempo >= 0 && tempo < historico.size())
+            return historico.get(tempo);
+        return new TickSnapshot(Estado.NaoCriada, -1);
+    }
+
     public void executar(int quantum) {
         if (tempoRestante > 0) {
             tempoRestante -= quantum;
@@ -56,4 +95,5 @@ public class Tarefa {
             }
         }
     }
+
 }
