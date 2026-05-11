@@ -16,5 +16,5 @@ public abstract class Escalonador {
     }
 
     // Executa 1 tick, recebe lista de processadores e ve quem fica com qual tarefa
-    public abstract void executar(Processador[] cpus);
+    public abstract void executar(Processador[] cpus, int valorDoQuantum);
 }

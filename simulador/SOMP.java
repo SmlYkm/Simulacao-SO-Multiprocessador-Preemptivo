@@ -8,16 +8,18 @@ public class SOMP {
     private Escalonador escalonador;
     private Processador[] processadores;
     private int tempoAtual;
+    private int quantum;
 
     private ArrayList<Tarefa> listaTarefasGeral;
 
 
-    public SOMP(Escalonador escalonador, int numProcessadores) {
+    public SOMP(Escalonador escalonador, int numProcessadores, int quantum) {
         this.escalonador = escalonador;
         this.processadores = new Processador[numProcessadores];
         for (int i = 0; i < numProcessadores; i++) {
             this.processadores[i] = new Processador(i);
         }
+        this.quantum = quantum;
         this.tempoAtual = 0;
 
         this.listaTarefasGeral = new ArrayList<>();
@@ -40,14 +42,14 @@ public class SOMP {
                 escalonador.adicionarTarefa(tarefa);
         }
 
-        escalonador.executar(processadores);       // Escalonador executa seu algoritmo
+        escalonador.executar(processadores, quantum);       // Escalonador executa seu algoritmo
 
         gravarHistorico();
 
         for (Processador cpu : processadores) {    // Executa 1 tick por processador
             cpu.executar();                       
         }
-        
+
         ++tempoAtual;
     }
 

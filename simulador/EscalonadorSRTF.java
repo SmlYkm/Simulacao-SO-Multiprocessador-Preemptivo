@@ -7,13 +7,18 @@ import java.util.List;
 public class EscalonadorSRTF extends Escalonador {
 
     @Override
-    public void executar(Processador[] cpus) {
+    public void executar(Processador[] cpus, int valorDoQuantum) {
         
         // 1. Devolver todas as tarefas atualmente nas CPUs para a lista geral do escalonador
         // Isso é necessário para avaliarmos TODAS as tarefas juntas (prontas + executando)
         for (Processador cpu : cpus) {
             Tarefa t = cpu.getTarefaAtual();
             if (t != null && !t.isFinalizada()) {
+                //Se a tarefa for maior que o quantum, ela é expulsa da CPU e volta para a lista de tarefas do escalonador
+                if (cpu.getTicksNoQuantum() >= valorDoQuantum) {
+                    cpu.setTarefaAtual(null); // Expulsa a tarefa
+                    cpu.resetTicksNoQuantum();
+                }
                 if (!tarefas.contains(t)) {
                     tarefas.add(t);
                 }
@@ -55,6 +60,9 @@ public class EscalonadorSRTF extends Escalonador {
             }
 
             // Desempate 4: Sorteio 
+            t1.setEnvolvidaEmSorteio(true);
+            t2.setEnvolvidaEmSorteio(true); 
+            
             return Double.compare(t1.getValorSorteioAtual(), t2.getValorSorteioAtual());
         });
 
@@ -67,8 +75,10 @@ public class EscalonadorSRTF extends Escalonador {
 
         // B) Passo 1 da Distribuição: Afinidade. 
         // Se a tarefa já estava nessa CPU e continua tendo direito de executar, ela permanece
+        
         for (Processador cpu : cpus) {
             Tarefa tarefaAntiga = cpu.getTarefaAtual();
+            
             
             if (tarefaAntiga != null && tarefasParaExecutar.contains(tarefaAntiga)) {
                 // A tarefa já estava e vai continuar rodando 

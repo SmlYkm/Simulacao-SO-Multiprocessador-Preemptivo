@@ -80,6 +80,11 @@ public class Tarefa {
 
     // Método para o SOMP gravar o que aconteceu neste tick
     public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
+
+        if (this.envolvidaEmSorteio) {
+            System.out.println("Salvando histórico: A T" + this.id + " TEM sorteio no tick " + tempoAtual);
+        }
+        
         // Preenche buracos se o tempo der saltos (segurança)
         while (historico.size() <= tempoAtual) {
             historico.add(new TickSnapshot(Estado.NaoCriada, -1, false));

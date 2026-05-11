@@ -28,7 +28,7 @@ public class LeitorConfig {
                 } // Podes adicionar outros if/else para "PRIOP", etc.
 
                 // Cria o Sistema Operativo
-                sistema = new SOMP(escalonador, qtdeCpus);
+                sistema = new SOMP(escalonador, qtdeCpus, quantum);
                 
                 // DICA: Vais precisar de adicionar o 'quantum' no construtor do teu SOMP depois!
             }
