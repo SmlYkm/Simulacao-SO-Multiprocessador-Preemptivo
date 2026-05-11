@@ -42,10 +42,12 @@ public class SOMP {
 
         escalonador.executar(processadores);       // Escalonador executa seu algoritmo
 
+        gravarHistorico();
+
         for (Processador cpu : processadores) {    // Executa 1 tick por processador
             cpu.executar();                       
         }
-        gravarHistorico();
+        
         ++tempoAtual;
     }
 

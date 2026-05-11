@@ -160,6 +160,32 @@ public class Window extends JFrame {
                         g2.setColor(Color.WHITE); // Texto branco para contraste
                         g2.setFont(new Font("Arial", Font.BOLD, 12));
                         g2.drawString("P" + reg.cpuId, x + 5, y + 25);
+
+                        // Desenha um pequeno círculo amarelo com borda preta
+                        if (reg.ocorreuSorteio) {
+                            // Coordenadas centrais da estrela
+                            int cx = x + TICK_WIDTH - 10; 
+                            int cy = y + 10;
+                            
+                            // Tamanho da estrela
+                            int raioExterno = 6;
+                            int raioInterno = 3;
+                            int pontas = 5;
+
+                            Polygon estrela = new Polygon();
+                            // Matemática para calcular as 10 quinas da estrela (5 externas, 5 internas)
+                            for (int j = 0; j < pontas * 2; j++) {
+                                double angulo = j * Math.PI / pontas - Math.PI / 2;
+                                int r = (j % 2 == 0) ? raioExterno : raioInterno;
+                                estrela.addPoint((int)(cx + r * Math.cos(angulo)), (int)(cy + r * Math.sin(angulo)));
+                            }
+
+                            // Desenha a estrela preenchida de amarelo e com borda preta
+                            //g2.setColor(Color.YELLOW);
+                            //g2.fillPolygon(estrela);
+                            g2.setColor(Color.BLACK);
+                            g2.drawPolygon(estrela);
+                        }
                         
                     } else if (reg.estado == Tarefa.Estado.Suspenso) {
                         // Tarefa suspensa = Bloco Preto

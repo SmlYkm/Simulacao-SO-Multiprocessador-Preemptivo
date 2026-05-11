@@ -11,7 +11,9 @@ public class Tarefa {
     private int tempoExecucao;
     private int tempoRestante;
     private int tempoChegada;
+    private double valorSorteioAtual;
     private boolean finalizada;
+    private boolean envolvidaEmSorteio;
     private String cor;
 
     private List<Evento>       eventos;
@@ -30,10 +32,12 @@ public class Tarefa {
     public class TickSnapshot { 
         public Estado estado;
         public int    cpuId;
+        public boolean ocorreuSorteio;
 
-        public TickSnapshot(Estado estado, int cpuId) {
+        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio) {
             this.estado = estado;
             this.cpuId  = cpuId;
+            this.ocorreuSorteio = ocorreuSorteio;
         }
     }
 
@@ -45,6 +49,7 @@ public class Tarefa {
         this.tempoRestante = tempoExecucao;
         this.prioridade = prioridade;
         this.finalizada = false;
+        this.envolvidaEmSorteio = false;
         this.cor =  "#" + cor;
         this.eventos = new ArrayList<>();
         if (lista_eventos != null) {
@@ -59,13 +64,17 @@ public class Tarefa {
     public int getTempoExecucao() { return tempoExecucao; }
     public int getTempoRestante() { return tempoRestante; }
     public int getTempoChegada() { return tempoChegada; }
+    public double getValorSorteioAtual() { return valorSorteioAtual; }
     public boolean isFinalizada() { return finalizada; }
+    public boolean isEnvolvidaEmSorteio() { return envolvidaEmSorteio; }
     public String getCor() { return cor; }
     public List<Evento> getEventos() { return eventos; }
-
+    
     public void setPrioridade(int prioridade) { this.prioridade = prioridade; }
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
+    public void setValorSorteioAtual(double valorSorteioAtual) { this.valorSorteioAtual = valorSorteioAtual; }
     public void setFinalizada(boolean finalizada) { this.finalizada = finalizada; }
+    public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }
 
@@ -73,17 +82,19 @@ public class Tarefa {
     public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
         // Preenche buracos se o tempo der saltos (segurança)
         while (historico.size() <= tempoAtual) {
-            historico.add(
-                new TickSnapshot(Estado.NaoCriada, -1)
-            );
+            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false));
         }
-        historico.set(tempoAtual, new TickSnapshot(estado, cpuId));
+        // Grava o estado atual e se houve sorteio
+        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio));
+        
+        // Reseta a flag para o próximo tick
+        this.envolvidaEmSorteio = false;
     }
 
     public TickSnapshot getRegistroNoTempo(int tempo) {
         if (tempo >= 0 && tempo < historico.size())
             return historico.get(tempo);
-        return new TickSnapshot(Estado.NaoCriada, -1);
+        return new TickSnapshot(Estado.NaoCriada, -1, false); // Retorna um estado padrão se o tempo for inválido
     }
 
     public void executar(int quantum) {
