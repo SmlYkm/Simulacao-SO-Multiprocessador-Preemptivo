@@ -31,19 +31,61 @@ public class Window extends JFrame {
         JButton btnAdd       = new JButton("Adicionar Tarefa");
         JButton btnCPU       = new JButton("Config. CPUs");
         JButton btnImport    = new JButton("Importar Config");
+
+
+        // Botões de controle de tempo
+        JButton btnBack      = new JButton("(<) Retroceder");
         JButton btnStep      = new JButton("Próximo Passo (>)");
-        
-        // Ação do botão para avançar o tempo
+        JButton btnRunAll    = new JButton("Execução Completa (>>)");
+
+        // 1. Avançar um passo  
         btnStep.addActionListener(e -> {
-            this.sistema.executar(); // SO calcula o tick
-            incrementTime();         // Interface avança o desenho
+            // Se a interface está atrasada em relação ao SO, apenas avança a imagem
+            if (currentTime < sistema.getTempoAtual()) {
+                currentTime++;
+            } else {
+                // Se estamos no tempo presente, o SO tem de calcular o próximo tick
+                if (!sistema.isFinalizado()) {
+                    sistema.executar();
+                    currentTime = sistema.getTempoAtual();
+                } else {
+                    JOptionPane.showMessageDialog(this, "A simulação já terminou!");
+                }
+            }
+            ganttPanel.revalidate();
+            ganttPanel.repaint();
         });
 
+        // 2. Retroceder
+        btnBack.addActionListener(e -> {
+            if (currentTime > 0) {
+                currentTime--; // A interface viaja no tempo para o passado!
+                ganttPanel.revalidate();
+                ganttPanel.repaint();
+            }
+        });
+
+        // 3. Execução completa
+        btnRunAll.addActionListener(e -> {
+            // Roda o SO num loop invisível até tudo terminar
+            while (!sistema.isFinalizado()) {
+                sistema.executar();
+            }
+            // Avança o relógio visual para o fim da simulação
+            currentTime = sistema.getTempoAtual();
+            ganttPanel.revalidate();
+            ganttPanel.repaint();
+        });
+
+        // Adicionar os botões ao painel
         controlPanel.add(btnAdd);
         controlPanel.add(btnCPU);
         controlPanel.add(btnImport);
         controlPanel.add(new JSeparator(SwingConstants.VERTICAL));
+        controlPanel.add(btnBack);
         controlPanel.add(btnStep);
+        controlPanel.add(btnRunAll);
+        
         add(controlPanel, BorderLayout.NORTH);
 
         // Gráfico de Gantt

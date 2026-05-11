@@ -81,4 +81,18 @@ public class SOMP {
             }
         }
     }
+    // Retorna o tempo real da simulação
+    public int getTempoAtual() { 
+        return tempoAtual; 
+    }
+    
+    // Verifica se TODAS as tarefas já terminaram
+    public boolean isFinalizado() {
+        for (Tarefa t : listaTarefasGeral) {
+            if (!t.isFinalizada()) {
+                return false; // Se encontrar uma que não terminou, retorna falso
+            }
+        }
+        return true; // Todas terminaram!
+    }
 }
