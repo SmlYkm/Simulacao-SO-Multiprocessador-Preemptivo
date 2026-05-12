@@ -216,18 +216,18 @@ public class Window extends JFrame {
 
                     // Verifica se ocorreu sorteio
                     if (reg.ocorreuSorteio) {
-                            // Debug no terminal para termos certeza que a UI sabe do sorteio
-                            System.out.println("UI: Desenhando Sorteio na T" + t.getId() + " no tick " + tick); 
-                            
-                            // Desenha um círculo Vermelho
-                            g2.setColor(Color.RED);
-                            g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
-                            
-                            // Desenha um "S" Branco e legível dentro
-                            g2.setColor(Color.WHITE);
-                            g2.setFont(new Font("Arial", Font.BOLD, 9));
-                            g2.drawString("S", x + TICK_WIDTH - 9, y + 11);
-                        }
+                        // Debug no terminal para termos certeza que a UI sabe do sorteio
+                        System.out.println("UI: Desenhando Sorteio na T" + t.getId() + " no tick " + tick); 
+                        
+                        // Desenha um círculo Vermelho
+                        g2.setColor(Color.RED);
+                        g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
+                        
+                        // Desenha um "S" Branco e legível dentro
+                        g2.setColor(Color.WHITE);
+                        g2.setFont(new Font("Arial", Font.BOLD, 9));
+                        g2.drawString("S", x + TICK_WIDTH - 9, y + 11);
+                    }
                     
                     // Se o estado for NaoCriada ou Finalizado, a tela não desenha nada
                 }
