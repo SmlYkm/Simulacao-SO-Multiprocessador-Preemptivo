@@ -25,7 +25,9 @@ public class LeitorConfig {
                 Escalonador escalonador = null;
                 if (algoritmo.equalsIgnoreCase("SRTF")) {
                     escalonador = new EscalonadorSRTF();
-                } // Podes adicionar outros if/else para "PRIOP", etc.
+                } else if (algoritmo.equalsIgnoreCase("PRIOP")) {
+                    escalonador = new EscalonadorPRIOP();        
+                }
 
                 // Cria o Sistema Operativo
                 sistema = new SOMP(escalonador, qtdeCpus, quantum);

@@ -43,6 +43,10 @@ public abstract class Escalonador {
             return compareDuracao;
 
         // Desempate 4: Sorteio 
+        for (Tarefa t : tarefas) {
+            t.setValorSorteioAtual(Math.random());
+        }
+
         t1.setEnvolvidaEmSorteio(true);
         t2.setEnvolvidaEmSorteio(true); 
         
@@ -59,40 +63,30 @@ public abstract class Escalonador {
     }
 
     protected void distribuirTarefasPreemptivo(Processador[] cpus) {
-        // A) Separamos as tarefas que vão ganhar o direito de executar neste tick.
-        // Pegamos apenas as N primeiras (N = quantidade de CPUs), MAS SEM REMOVER da lista original.
-        List<Tarefa> tarefasParaExecutar = new ArrayList<>();
-        int limite = Math.min(tarefas.size(), cpus.length);
         
-        for (int i = 0; i < limite; i++) {
-            tarefasParaExecutar.add(tarefas.get(i));
+        List<Tarefa> tarefasParaExecutar = new ArrayList<>();  // Tarefas que vão executar neste tick
+        for (Tarefa t : tarefas) {
+            if (!t.isSuspensa() && !t.isFinalizada())
+                tarefasParaExecutar.add(t);
+            if (tarefasParaExecutar.size() == cpus.length) 
+                break;  // Ja foi as n cpus
         }
         
-        // B) Passo 1 da Distribuição: Afinidade e PREEMPÇÃO.
-        for (Processador cpu : cpus) {
+        for (Processador cpu : cpus) {  // Distribuição por afinidade e preempção
             Tarefa tarefaAtual = cpu.getTarefaAtual();
                         
             if (tarefaAtual != null) {
                 if (tarefasParaExecutar.contains(tarefaAtual)) {
-                    // AFINIDADE: A tarefa já estava na CPU e continua tendo prioridade alta o suficiente.
-                    // Removemos da nossa listinha TEMPORÁRIA para saber que ela já foi alocada.
-                    tarefasParaExecutar.remove(tarefaAtual);
+                    tarefasParaExecutar.remove(tarefaAtual);  // Afinidade -> tarefa já estava na CPU e continua tendo prioridade alta o suficiente
                 } else {
-                    // PREEMPÇÃO: A tarefa que estava rodando não está mais no "Top N" de prioridade.
-                    // Ela perde a CPU! Como não a removemos da lista 'tarefas' global, ela 
-                    // continuará na fila de prontos para tentar rodar no futuro.
-                    cpu.setTarefaAtual(null);
-                }
+                    cpu.setTarefaAtual(null); // Preempção -> tarefa que estava rodando não está mais estre as n mais prioritárias
+                }                                          // Perde a cpu
             }
         }
 
-        // C) Passo 2 da Distribuição: Preencher os espaços vazios.
-        // Pegamos as tarefas prioritárias que sobraram e colocamos nas CPUs que ficaram livres.
-        for (Processador cpu : cpus) {
+        for (Processador cpu : cpus) {  // Tarefas prioritárias que sobraram vão pra cpus livres
             if (cpu.idle() && !tarefasParaExecutar.isEmpty()) {
-                // Aqui sim usamos remove(0), mas estamos removendo da listinha TEMPORÁRIA,
-                // não da lista global 'tarefas'.
-                cpu.setTarefaAtual(tarefasParaExecutar.remove(0));
+                cpu.setTarefaAtual(tarefasParaExecutar.remove(0));  // Inicio da fila -> mais prioritária
             }
         }
     }
