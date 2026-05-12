@@ -15,16 +15,14 @@ public class Window extends JFrame {
     private int currentTime = 0;
     private GanttPanel ganttPanel;
     
-    private List<Tarefa> tasksHistory = new ArrayList<>(); 
-    private SOMP sistema;
+    private List<Tarefa>         tasksHistory = new ArrayList<>(); 
+    private SimulationController controller;
 
-    public Window(String title, SOMP sistema) {
+    public Window(String title) {
         setTitle(title);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 600);
         setLayout(new BorderLayout());
-
-        this.sistema = sistema;
 
         // Painel Superior: Opções Globais
         JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -32,47 +30,27 @@ public class Window extends JFrame {
         JButton btnCPU       = new JButton("Config. CPUs");
         JButton btnImport    = new JButton("Importar Config");
 
-
         // Botões de controle de tempo
         JButton btnBack      = new JButton("(<) Retroceder");
         JButton btnStep      = new JButton("Próximo Passo (>)");
         JButton btnRunAll    = new JButton("Execução Completa (>>)");
 
-        // 1. Avançar um passo  
         btnStep.addActionListener(e -> {
-            // Se a interface está atrasada em relação ao SO, apenas avança a imagem
-            if (currentTime < sistema.getTempoAtual()) {
-                currentTime++;
-            } else {
-                // Se estamos no tempo presente, o SO tem de calcular o próximo tick
-                if (!sistema.isFinalizado()) {
-                    sistema.executar();
-                    currentTime = sistema.getTempoAtual();
-                } else {
-                    JOptionPane.showMessageDialog(this, "A simulação já terminou!");
-                }
-            }
+            if (controller != null) controller.stepForward(currentTime);
             ganttPanel.revalidate();
             ganttPanel.repaint();
         });
 
-        // 2. Retroceder
         btnBack.addActionListener(e -> {
             if (currentTime > 0) {
-                currentTime--; // A interface viaja no tempo para o passado!
+                currentTime--; 
                 ganttPanel.revalidate();
                 ganttPanel.repaint();
             }
         });
 
-        // 3. Execução completa
         btnRunAll.addActionListener(e -> {
-            // Roda o SO num loop invisível até tudo terminar
-            while (!sistema.isFinalizado()) {
-                sistema.executar();
-            }
-            // Avança o relógio visual para o fim da simulação
-            currentTime = sistema.getTempoAtual();
+            if (controller != null) controller.runAll();
             ganttPanel.revalidate();
             ganttPanel.repaint();
         });
@@ -109,6 +87,18 @@ public class Window extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    public void setController(SimulationController ctrl) {
+        this.controller = ctrl;
+    }
+
+    public void setCurrentTime(int t) {
+        this.currentTime = t;
+    }
+
+    public void showError(String msg) {
+        JOptionPane.showMessageDialog(this, msg);
+    }
+
     // Método para injetar tarefas e atualizar a tela
     public void addTask(Tarefa t) {
         tasksHistory.add(t);
@@ -117,13 +107,43 @@ public class Window extends JFrame {
     }
 
     // Abre menu para modificar atributos
-    private void openTaskOptions(int taskIndex) {
-        Tarefa t = tasksHistory.get(taskIndex);
+    private void openTaskOptions(int idx) {
+        Tarefa t = tasksHistory.get(idx); // Pega apenas pra ler dados pra interface
         JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + t.getId());
-        menu.add(new JMenuItem("Alterar Prioridade"));
-        menu.add(new JMenuItem("Suspender Tarefa"));
-        menu.add(new JMenuItem("Forçar Execução"));
-        menu.show(ganttPanel, 10, (taskIndex * ROW_HEIGHT) + 50);
+        
+        JMenuItem prioritySetter = new JMenuItem(new AbstractAction("Alterar Prioridade") {
+            public void actionPerformed(ActionEvent e) {
+                String input = JOptionPane.showInputDialog(
+                    Window.this, 
+                    "Nova prioridade para T" + t.getId() + ":", 
+                    "Alterar Prioridade", 
+                    JOptionPane.QUESTION_MESSAGE
+                );
+
+                if (input != null && !input.trim().isEmpty()) {
+                    try {
+                        int priority = Integer.parseInt(input.trim());
+                        // Chama o controller para alterar no Model!
+                        if (controller != null) controller.changeTaskPriority(idx, priority);
+                        ganttPanel.repaint(); 
+                    } catch (NumberFormatException ex) {
+                        showError("Valor inválido! Use apenas números.");
+                    }
+                }
+            }
+        });
+
+        String suspLabel = t.isSuspensa() ? "Retomar Tarefa" : "Suspender Tarefa";
+        JMenuItem suspendTaskSetter = new JMenuItem(new AbstractAction(suspLabel) {
+            public void actionPerformed(ActionEvent e) {
+                if (controller != null) controller.toggleTaskSuspension(idx);
+                ganttPanel.repaint(); 
+            }
+        });
+
+        menu.add(prioritySetter);
+        menu.add(suspendTaskSetter);
+        menu.show(ganttPanel, 10, (idx * ROW_HEIGHT) + 50);
     }
 
     public void incrementTime() {

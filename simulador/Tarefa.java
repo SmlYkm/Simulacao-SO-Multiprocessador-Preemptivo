@@ -13,8 +13,10 @@ public class Tarefa {
     private int tempoChegada;
     private double valorSorteioAtual;
     private boolean finalizada;
+    private boolean suspensa;
     private boolean envolvidaEmSorteio;
     private String cor;
+    
 
     private List<Evento>       eventos;
     private List<TickSnapshot> historico;
@@ -49,6 +51,7 @@ public class Tarefa {
         this.tempoRestante = tempoExecucao;
         this.prioridade = prioridade;
         this.finalizada = false;
+        this.suspensa = false;
         this.envolvidaEmSorteio = false;
         this.cor =  "#" + cor;
         this.eventos = new ArrayList<>();
@@ -66,6 +69,7 @@ public class Tarefa {
     public int getTempoChegada() { return tempoChegada; }
     public double getValorSorteioAtual() { return valorSorteioAtual; }
     public boolean isFinalizada() { return finalizada; }
+    public boolean isSuspensa() { return suspensa; }
     public boolean isEnvolvidaEmSorteio() { return envolvidaEmSorteio; }
     public String getCor() { return cor; }
     public List<Evento> getEventos() { return eventos; }
@@ -74,6 +78,7 @@ public class Tarefa {
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
     public void setValorSorteioAtual(double valorSorteioAtual) { this.valorSorteioAtual = valorSorteioAtual; }
     public void setFinalizada(boolean finalizada) { this.finalizada = finalizada; }
+    public void suspender(boolean suspensa) { this.suspensa = suspensa; }
     public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }

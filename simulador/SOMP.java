@@ -1,8 +1,6 @@
 package simulador;
 
 import java.util.ArrayList;
-import java.util.List;
-
 
 public class SOMP {
     private Escalonador escalonador;
@@ -31,8 +29,18 @@ public class SOMP {
     }
 
     // Método para o Main poder puxar a lista de tarefas e enviar para a Window:
-    public List<Tarefa> getListaTarefasGeral() {
-        return listaTarefasGeral;
+    // public List<Tarefa> getListaTarefasGeral() {
+    //     return listaTarefasGeral;
+    // }
+
+    public int getTotalNumTarefas() {
+        return listaTarefasGeral.size();
+    }
+
+    public Tarefa getTarefaByIdx(int idx) {
+        if (listaTarefasGeral != null)  // && id >= 0 && id < listaTarefasGeral.size())
+            return listaTarefasGeral.get(idx);  // get ja tem checagem de idx
+        return null;
     }
 
     // Execução de 1 tick
