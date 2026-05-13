@@ -2,7 +2,6 @@ package simulador;
 
 import java.util.ArrayList;
 import java.util.List;
-// import java.awt.Color; 
 
 public class Tarefa {
 
@@ -17,7 +16,6 @@ public class Tarefa {
     private boolean envolvidaEmSorteio;
     private String cor;
     
-
     private List<Evento>       eventos;
     private List<TickSnapshot> historico;
 

@@ -23,6 +23,12 @@ public abstract class Escalonador {
         tarefas.removeIf(Tarefa::isFinalizada);
     }
 
+    protected void sortearValores() {
+        for (Tarefa t : tarefas) {
+            t.setValorSorteioAtual(Math.random());
+        }
+    }
+
     protected int desempate(Tarefa t1, Tarefa t2, Processador[] cpus) {
         // Desempate 1: A tarefa já estava executando imediatamente antes?
         boolean t1EstavaExecutando = estavaExecutando(t1, cpus);
@@ -43,10 +49,6 @@ public abstract class Escalonador {
             return compareDuracao;
 
         // Desempate 4: Sorteio 
-        for (Tarefa t : tarefas) {
-            t.setValorSorteioAtual(Math.random());
-        }
-
         t1.setEnvolvidaEmSorteio(true);
         t2.setEnvolvidaEmSorteio(true); 
         

@@ -10,7 +10,6 @@ public class SOMP {
 
     private ArrayList<Tarefa> listaTarefasGeral;
 
-
     public SOMP(Escalonador escalonador, int numProcessadores, int quantum) {
         this.escalonador = escalonador;
         this.processadores = new Processador[numProcessadores];
@@ -43,28 +42,27 @@ public class SOMP {
         return null;
     }
 
-    // Execução de 1 tick
-    public void executar() {
-        for (Tarefa tarefa : listaTarefasGeral) {  // Coloca tarefas que chegaram agora no escalonador
+    public void executar() {  // Execução de 1 tick
+        for (Tarefa tarefa : listaTarefasGeral) {      // Coloca tarefas que chegaram agora no escalonador
             if (tarefa.getTempoChegada() == tempoAtual)
                 escalonador.adicionarTarefa(tarefa);
         }
 
-        escalonador.executar(processadores, quantum);       // Escalonador executa seu algoritmo
-
+        escalonador.executar(processadores, quantum);  // Escalonador executa seu algoritmo
         gravarHistorico();
-
-        for (Processador cpu : processadores) {    // Executa 1 tick por processador
+        for (Processador cpu : processadores) {        // Executa 1 tick por processador
             cpu.executar();                       
         }
-
         ++tempoAtual;
     }
 
     private void gravarHistorico() {
         for (Tarefa tarefa : listaTarefasGeral) {
-            if (tarefa.isFinalizada()) {  // Terminou
+            if (tarefa.isFinalizada()) {                         // Terminou
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1);
+                continue;
+            } else if (tarefa.isSuspensa()) {                    // Suspenso
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1);
                 continue;
             } else if (tarefa.getTempoChegada() > tempoAtual) {  // Tarefa ainda não foi criada
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1);
@@ -84,23 +82,29 @@ public class SOMP {
 
             if (cpuId != -1) {  // Ta rodando em algum lugar
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Executando, cpuId);
-            } else {            // Não ta rodando, mas já chegou e não terminou -> está Suspenso
-                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1);
+            } else {            // Não ta rodando, mas já chegou e não terminou -> está esperando
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1);
             }
         }
     }
-    // Retorna o tempo real da simulação
-    public int getTempoAtual() { 
+    
+    public int getTempoAtual() {  // Retorna o tempo real da simulação
         return tempoAtual; 
     }
     
-    // Verifica se TODAS as tarefas já terminaram
-    public boolean isFinalizado() {
+    public boolean isFinalizado() {  // Verifica se todas as tarefas já terminaram
         for (Tarefa t : listaTarefasGeral) {
             if (!t.isFinalizada()) {
-                return false; // Se encontrar uma que não terminou, retorna falso
+                return false;       // Se encontrar uma que não terminou, retorna falso
             }
         }
-        return true; // Todas terminaram!
+        return true; // Todas terminaram
+    }
+
+    public void stepBack() {
+        if (tempoAtual <= 0)
+            return;
+        --tempoAtual;
+        // TODO
     }
 }

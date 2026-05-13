@@ -12,7 +12,7 @@ public class Window extends JFrame {
     private final int LABEL_WIDTH = 120;      // Largura da coluna de nomes (esquerda)
     private final int TICK_WIDTH  = 25;       // Largura de cada tick de tempo (eixo X)
     
-    private int currentTime = 0;
+    private int        currentTime = 0;
     private GanttPanel ganttPanel;
     
     private List<Tarefa>         tasksHistory = new ArrayList<>(); 
@@ -36,21 +36,22 @@ public class Window extends JFrame {
         JButton btnRunAll    = new JButton("Execução Completa (>>)");
 
         btnStep.addActionListener(e -> {
-            if (controller != null) controller.stepForward(currentTime);
+            if (controller != null) 
+                controller.stepForward(currentTime);
             ganttPanel.revalidate();
             ganttPanel.repaint();
         });
 
         btnBack.addActionListener(e -> {
-            if (currentTime > 0) {
-                currentTime--; 
-                ganttPanel.revalidate();
-                ganttPanel.repaint();
-            }
+            if (controller != null)
+                controller.stepBack();
+            ganttPanel.revalidate();
+            ganttPanel.repaint();
         });
 
         btnRunAll.addActionListener(e -> {
-            if (controller != null) controller.runAll();
+            if (controller != null) 
+                controller.runAll();
             ganttPanel.revalidate();
             ganttPanel.repaint();
         });
@@ -93,6 +94,10 @@ public class Window extends JFrame {
 
     public void setCurrentTime(int t) {
         this.currentTime = t;
+    }
+
+    public void decCurrentTime() {
+        --currentTime;
     }
 
     public void showError(String msg) {

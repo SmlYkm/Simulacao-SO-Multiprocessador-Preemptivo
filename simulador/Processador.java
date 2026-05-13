@@ -34,7 +34,7 @@ public class Processador {
     public void executar() {
         if (tarefaAtual != null) {
             tarefaAtual.executar(1);
-            ticksNoQuantum++;
+            ++ticksNoQuantum;
             if (tarefaAtual.isFinalizada()) {   // Seta para null no caso de ja terminar a tarefa
                 tarefaAtual = null;
                 ticksNoQuantum = 0;
