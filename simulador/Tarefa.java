@@ -80,6 +80,7 @@ public class Tarefa {
     public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }
+    public void apagarRegistroNoTempo(int tempo) { if(tempo >= 0 && tempo < historico.size()) historico.remove(tempo); }
 
     // Método para o SOMP gravar o que aconteceu neste tick
     public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {

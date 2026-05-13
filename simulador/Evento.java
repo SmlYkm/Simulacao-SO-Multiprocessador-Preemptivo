@@ -1,5 +1,6 @@
 package simulador;
-abstract class Evento {
+
+public abstract class Evento {
     private int tempoChegada;
     private int tempoExecucao;
 
@@ -10,7 +11,6 @@ abstract class Evento {
 
     public int getTempoChegada() {
         return tempoChegada;
-
     }
 
     public int getTempoExecucao() {

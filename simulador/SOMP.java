@@ -1,6 +1,7 @@
 package simulador;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SOMP {
     private Escalonador escalonador;
@@ -42,17 +43,55 @@ public class SOMP {
         return null;
     }
 
-    public void executar() {  // Execução de 1 tick
-        for (Tarefa tarefa : listaTarefasGeral) {      // Coloca tarefas que chegaram agora no escalonador
-            if (tarefa.getTempoChegada() == tempoAtual)
-                escalonador.adicionarTarefa(tarefa);
+    public void executar() {  
+        // 1. RECONSTRÓI A FILA DO ZERO (Evita que as tarefas caiam num buraco negro)
+        escalonador.limparFila();
+        for (Tarefa t : listaTarefasGeral) {
+            // Se a tarefa já chegou, não acabou e não está suspensa, ela vai para a disputa!
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa()) {
+                escalonador.adicionarTarefa(t);
+            }
         }
 
-        escalonador.executar(processadores, quantum);  // Escalonador executa seu algoritmo
-        gravarHistorico();
-        for (Processador cpu : processadores) {        // Executa 1 tick por processador
-            cpu.executar();                       
+        // 2. VERIFICA O QUANTUM (Preempção por tempo)
+        for (Processador cpu : processadores) {
+            Tarefa t = cpu.getTarefaAtual();
+            if (t != null && cpu.getTicksNoQuantum() >= quantum) {
+                cpu.setTarefaAtual(null); // Expulsa da CPU (o passo 1 já garantiu que ela está na fila)
+                cpu.resetTicksNoQuantum();
+            }
         }
+
+        // 3. ESCALONADOR ORGANIZA AS PRIORIDADES
+        escalonador.prepararFila(processadores, quantum);  
+
+        // 4. SOMP PEGA AS 'N' PRIMEIRAS TAREFAS
+        List<Tarefa> topTarefas = new ArrayList<>();
+        for (int i = 0; i < processadores.length; i++) {
+            Tarefa proxima = escalonador.obterProximaTarefa();
+            if (proxima != null) {
+                topTarefas.add(proxima);
+            }
+        }
+
+        // 5. DISTRIBUIÇÃO NAS CPUS (Afinidade e preenchimento)
+        for (Processador cpu : processadores) {
+            Tarefa tarefaAtual = cpu.getTarefaAtual();
+            if (tarefaAtual != null && topTarefas.contains(tarefaAtual)) {
+                topTarefas.remove(tarefaAtual); // Continua na mesma CPU
+            } else {
+                cpu.setTarefaAtual(null); // Saiu da CPU
+            }
+        }
+        for (Processador cpu : processadores) { 
+            if (cpu.idle() && !topTarefas.isEmpty()) {
+                cpu.setTarefaAtual(topTarefas.remove(0));  
+            }
+        }
+
+        // 6. GRAVA O ESTADO E EXECUTA O TICK
+        gravarHistorico();
+        for (Processador cpu : processadores) { cpu.executar(); }
         ++tempoAtual;
     }
 
@@ -102,16 +141,28 @@ public class SOMP {
     }
 
     public void stepBack() {
-        if (tempoAtual <= 0)
-            return;
-        --tempoAtual;
-        // processadores.stepBack();  TODO
-        for (Processador p : processadores) {
-            p.stepBack();
-        }
-        // tarefas.stepBack(); TODO
+        if (tempoAtual <= 0) return;
+        --tempoAtual; // A máquina do tempo: volta 1 tick
+
+        // 1. Restaura a "Vida" matemática das tarefas
         for (Tarefa t : listaTarefasGeral) {
-            t.stepBack();
+            Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
+            
+            if (reg.estado == Tarefa.Estado.Executando) {
+                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
+                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
+            }
+            
+            // Apaga a linha gráfica do futuro
+            t.apagarRegistroNoTempo(tempoAtual);
+        }
+
+        // 2. Limpa as CPUs. 
+        // Não se preocupe em devolvê-las ao Escalonador agora. Quando você clicar em "Próximo Passo", 
+        // o novo método executar() (ali em cima) vai reconstruir a fila perfeitamente a partir da Lista Geral!
+        for (Processador cpu : processadores) {
+            cpu.setTarefaAtual(null);
+            cpu.resetTicksNoQuantum(); 
         }
     }
 }
