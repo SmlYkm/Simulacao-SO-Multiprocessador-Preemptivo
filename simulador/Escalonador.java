@@ -67,28 +67,34 @@ public abstract class Escalonador {
     protected void distribuirTarefasPreemptivo(Processador[] cpus) {
         
         List<Tarefa> tarefasParaExecutar = new ArrayList<>();  // Tarefas que vão executar neste tick
-        for (Tarefa t : tarefas) {
-            if (!t.isSuspensa() && !t.isFinalizada())
-                tarefasParaExecutar.add(t);
+        for (Tarefa t : tarefas) {                             // Partimos do presupostoque tarefas esta sortado
+            if (!t.isFinalizada())
+                tarefasParaExecutar.add(t);                    // Há a possibilidade de t estar suspenso, lidamos com isso depois
             if (tarefasParaExecutar.size() == cpus.length) 
-                break;  // Ja foi as n cpus
+                break;                                         // Ja foi as n cpus
         }
         
         for (Processador cpu : cpus) {  // Distribuição por afinidade e preempção
             Tarefa tarefaAtual = cpu.getTarefaAtual();
-                        
-            if (tarefaAtual != null) {
-                if (tarefasParaExecutar.contains(tarefaAtual)) {
-                    tarefasParaExecutar.remove(tarefaAtual);  // Afinidade -> tarefa já estava na CPU e continua tendo prioridade alta o suficiente
-                } else {
-                    cpu.setTarefaAtual(null); // Preempção -> tarefa que estava rodando não está mais estre as n mais prioritárias
-                }                                          // Perde a cpu
-            }
+            if (tarefaAtual == null)  // A tarefa que tava la ja foi finalizada
+                continue;             // ou ainda não foi atribuida uma tarefa
+            
+            if (tarefasParaExecutar.contains(tarefaAtual)) {
+                tarefasParaExecutar.remove(tarefaAtual);  // Afinidade -> tarefa já estava na CPU e continua tendo prioridade alta o suficiente
+            } else if (tarefaAtual.isSuspensa()) {
+                continue;  // Tarefa é mais prioritária mas está suspensa
+            } else {
+                cpu.getTarefaAtual().suspender(true);  // Suspende tarefa porque a nova é mais prioritária
+                cpu.setTarefaAtual(null);  // Preempção, perde a cpu, it's over
+            }                                            
         }
 
         for (Processador cpu : cpus) {  // Tarefas prioritárias que sobraram vão pra cpus livres
             if (cpu.idle() && !tarefasParaExecutar.isEmpty()) {
-                cpu.setTarefaAtual(tarefasParaExecutar.remove(0));  // Inicio da fila -> mais prioritária
+                Tarefa t = tarefasParaExecutar.remove(0);
+                if (t.isSuspensa())     // É possivel que a tarefa esteja suspensa
+                    t.suspender(false);
+                cpu.setTarefaAtual(t);  // Inicio da fila -> mais prioritária
             }
         }
     }
