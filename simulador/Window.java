@@ -26,8 +26,6 @@ public class Window extends JFrame {
 
         // Painel Superior: Opções Globais
         JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JButton btnCPU       = new JButton("Config. CPUs");
-        JButton btnImport    = new JButton("Importar Config");
 
         // Botões de controle de tempo
         JButton btnBack      = new JButton("(<) Retroceder");
@@ -56,8 +54,6 @@ public class Window extends JFrame {
         });
 
         // Adicionar os botões ao painel
-        controlPanel.add(btnCPU);
-        controlPanel.add(btnImport);
         controlPanel.add(new JSeparator(SwingConstants.VERTICAL));
         controlPanel.add(btnBack);
         controlPanel.add(btnStep);
