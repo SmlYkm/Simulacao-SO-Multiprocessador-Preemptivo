@@ -6,7 +6,6 @@ public class Main {
         SOMP sistema = LeitorConfig.carregarSimulacao("config.txt");
 
         if (sistema != null) {
-            // A Window agora NÃO precisa mais receber o 'sistema' (SOMP) no construtor.
             // Ela vai se comunicar com o sistema através do Controller.
             Window window = new Window("Simulador de Escalonamento MP");
 

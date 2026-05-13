@@ -78,7 +78,7 @@ public class Window extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getX() <= LABEL_WIDTH) {
-                    int taskIndex = (e.getY() - 30) / ROW_HEIGHT; // 30px
+                    int taskIndex = controller.getTotalNumTarefas() - (e.getY() - 30) / ROW_HEIGHT - 1; 
                     if (taskIndex >= 0 && taskIndex < tasksHistory.size())
                         openTaskOptions(taskIndex);
                 }
@@ -148,7 +148,7 @@ public class Window extends JFrame {
 
         menu.add(prioritySetter);
         menu.add(suspendTaskSetter);
-        menu.show(ganttPanel, 10, (idx * ROW_HEIGHT) + 50);
+        menu.show(ganttPanel, 10, ((controller.getTotalNumTarefas() - idx - 1) * ROW_HEIGHT) + 50);
     }
 
     public void incrementTime() {
@@ -192,6 +192,10 @@ public class Window extends JFrame {
                     g2.drawString(String.valueOf(t), x - 5, 20);
                 
                 g2.setColor(new Color(230, 230, 230));
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font("Arial", Font.BOLD, 12));
+                int rodapeY = 30 + (tasksHistory.size() * ROW_HEIGHT) + 30;
+                g2.drawString("Tempo Ocioso das CPUs:", 15, rodapeY);
             }
 
             // Coluna Esquerda = nome das tarefas e fundo
@@ -201,7 +205,7 @@ public class Window extends JFrame {
             g2.drawLine(LABEL_WIDTH, 0, LABEL_WIDTH, getHeight());
 
             for (int i = 0; i < tasksHistory.size(); ++i) {
-                int y = 30 + (i * ROW_HEIGHT);
+                int y    = 30 + ((tasksHistory.size() - 1 - i) * ROW_HEIGHT);
                 Tarefa t = tasksHistory.get(i);
                 
                 // Desenha o nome da tarefa

@@ -54,4 +54,8 @@ public class SimulationController {
         Tarefa t = model.getTarefaByIdx(taskIndex);
         t.suspender(!t.isSuspensa());
     }
+
+    public int getTotalNumTarefas() {
+        return model.getTotalNumTarefas();
+    }
 }
