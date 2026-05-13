@@ -47,4 +47,31 @@ public class Processador {
     public boolean idle() {
         return tarefaAtual == null;
     }
+
+    public void stepBack() {
+        if (tarefaAtual != null) {
+            Tarefa.TickSnapshot atual = tarefaAtual.popHistorico();
+            // Tarefa.TickSnapshot anterior = tarefaAtual.peekHistorico(); acho q n precisa  
+            tarefaAtual.popEvento();  // Por consistencia
+            switch (atual.estado) {  // TODO
+            case NaoCriada:
+                break;
+
+            case Esperando:
+                break;
+
+            case Executando:
+                break;
+
+            case Suspenso:
+                break;
+
+            case Finalizado:
+                break;
+            
+            default:
+                break;
+            }
+        }
+    }
 }

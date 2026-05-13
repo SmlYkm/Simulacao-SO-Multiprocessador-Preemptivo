@@ -115,4 +115,28 @@ public class Tarefa {
         }
     }
 
+    public Evento popEvento() {  // Remove ultimo evento, como se fosse uma stack
+        if (eventos.isEmpty())
+            return null;
+        int idx = eventos.size() - 1;
+        return eventos.remove(idx);
+    }
+
+    public TickSnapshot popHistorico() {
+        if (historico.isEmpty())
+            return null;
+        int idx = historico.size() - 1;
+        return historico.remove(idx);
+    }
+
+    public TickSnapshot peekHistorico() {
+        if (historico.isEmpty())
+            return null;
+        int idx = historico.size() - 1;
+        return historico.get(idx);
+    }
+
+    public void stepBack() {
+        // TODO
+    }
 }

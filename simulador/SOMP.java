@@ -105,6 +105,13 @@ public class SOMP {
         if (tempoAtual <= 0)
             return;
         --tempoAtual;
-        // TODO
+        // processadores.stepBack();  TODO
+        for (Processador p : processadores) {
+            p.stepBack();
+        }
+        // tarefas.stepBack(); TODO
+        for (Tarefa t : listaTarefasGeral) {
+            t.stepBack();
+        }
     }
 }

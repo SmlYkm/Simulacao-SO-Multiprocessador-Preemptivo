@@ -1,7 +1,6 @@
 package simulador;
 
 import java.util.ArrayList;
-// import simulador.Tarefa;
 import java.util.List;
 
 public abstract class Escalonador {
@@ -11,13 +10,17 @@ public abstract class Escalonador {
         tarefas = new ArrayList<>();
     }
     
-    // Coloca tarefa no final da fila
-    public void adicionarTarefa(Tarefa tarefa) {
+    public void adicionarTarefa(Tarefa tarefa) {  // Coloca tarefa no final da fila
         tarefas.add(tarefa);
     }
 
     // Executa 1 tick, recebe lista de processadores e ve quem fica com qual tarefa
     public abstract void executar(Processador[] cpus, int valorDoQuantum);
+    
+    public void stepBack() {  // Volta 1 tick no tempo
+        // TODO
+        
+    }
 
     protected void removerTarefasFinzalidas() {
         tarefas.removeIf(Tarefa::isFinalizada);
@@ -62,6 +65,39 @@ public abstract class Escalonador {
             }
         }
         return false;
+    }
+
+    protected void distribuirTarefas(Processador[] cpus) {
+        // A) Separamos as tarefas que vão ganhar o direito de executar
+        List<Tarefa> tarefasParaExecutar = new ArrayList<>();
+        while (!tarefas.isEmpty() && tarefasParaExecutar.size() < cpus.length) {
+            tarefasParaExecutar.add(tarefas.remove(0));
+        }
+
+        // B) Passo 1 da Distribuição: Afinidade. 
+        // Se a tarefa já estava nessa CPU e continua tendo direito de executar, ela permanece
+        
+        for (Processador cpu : cpus) {
+            Tarefa tarefaAntiga = cpu.getTarefaAtual();
+            
+            
+            if (tarefaAntiga != null && tarefasParaExecutar.contains(tarefaAntiga)) {
+                // A tarefa já estava e vai continuar rodando 
+                // Removemos ela da lista de pendentes
+                tarefasParaExecutar.remove(tarefaAntiga);
+            } else {
+                // Se a tarefa não tem mais prioridade para rodar (ou terminou), limpamos a CPU
+                cpu.setTarefaAtual(null);
+            }
+        }
+
+        // C) Passo 2 da Distribuição: Preencher os espaços vazios.
+        // Colocamos as tarefas restantes (novas ou que subiram de prioridade) nas CPUs livres.
+        for (Processador cpu : cpus) {
+            if (cpu.idle() && !tarefasParaExecutar.isEmpty()) {
+                cpu.setTarefaAtual(tarefasParaExecutar.remove(0));
+            }
+        }
     }
 
     protected void distribuirTarefasPreemptivo(Processador[] cpus) {
