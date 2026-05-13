@@ -1,21 +1,24 @@
 package simulador;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Processador {
     private int id;
     private Tarefa tarefaAtual; // Se for null, o processador está "desligado"
-    private int tempoDesligado; // Acumula os ticks em que ficou ocioso
     private int ticksNoQuantum; // Contador de ticks para controle de quantum
+    private List<Boolean> historicoOcioso = new ArrayList<>();// Histórico para controle de ociosidade (true = ocioso, false = ocupado)
     
     public Processador(int id) {
         this.id = id;
-        this.tempoDesligado = 0;
         this.tarefaAtual = null;
+        this.ticksNoQuantum = 0;
+        this.historicoOcioso = new ArrayList<>();
     }
     
     // Getters e setters básicos...
     public int getId() { return id; }
     public Tarefa getTarefaAtual() { return tarefaAtual; }
-    public int getTempoDesligado() { return tempoDesligado; }
     public int getTicksNoQuantum() { return ticksNoQuantum; }
     
     
@@ -26,7 +29,6 @@ public class Processador {
         this.tarefaAtual = tarefaAtual;
     }
     
-    public void setTempoDesligado(int tempoDesligado) { this.tempoDesligado = tempoDesligado; }
     public void resetTicksNoQuantum() { this.ticksNoQuantum = 0; }
 
 
@@ -40,7 +42,7 @@ public class Processador {
                 ticksNoQuantum = 0;
             }
         } else {
-            ++tempoDesligado;
+
         }
     }
     
@@ -73,5 +75,26 @@ public class Processador {
                 break;
             }
         }
+    
+    }
+    public void registrarOciosidade() {
+            // idle() deve ser o seu método que retorna true se a tarefaAtual for null
+            historicoOcioso.add(this.idle()); 
+    }
+    
+    public void apagarRegistroOciosidade(int tempo) {
+        // Remove a memória do futuro se voltarmos no tempo
+        if (tempo >= 0 && tempo < historicoOcioso.size()) {
+            historicoOcioso.remove(tempo);
+        }
+    }
+    
+    public int getTempoOciosoTotal() {
+        // Conta quantas vezes a CPU ficou ociosa até o momento atual
+        int total = 0;
+        for (Boolean ocioso : historicoOcioso) {
+            if (ocioso) total++;
+        }
+        return total;
     }
 }

@@ -150,6 +150,23 @@ public class Window extends JFrame {
         ganttPanel.revalidate();
         ganttPanel.repaint();
     }
+    // Desenha listras HORIZONTAIS (Para tarefas que chegaram e estão aguardando)
+    private void desenharListrasHorizontais(Graphics2D g2, int x, int y, int width, int height, Color cor) {
+        g2.setColor(cor);
+        // Pula de 4 em 4 pixels no eixo Y para criar o padrão listrado
+        for (int i = 2; i < height; i += 4) {
+            g2.drawLine(x, y + i, x + width, y + i);
+        }
+    }
+
+    // Desenha listras VERTICAIS (Para tarefas finalizadas)
+    private void desenharListrasVerticais(Graphics2D g2, int x, int y, int width, int height, Color cor) {
+        g2.setColor(cor);
+        // Pula de 4 em 4 pixels no eixo X para criar o padrão listrado
+        for (int i = 2; i < width; i += 4) {
+            g2.drawLine(x + i, y, x + i, y + height);
+        }
+    }
 
     // Painel de renderização do Gantt.
     private class GanttPanel extends JPanel {
@@ -184,13 +201,8 @@ public class Window extends JFrame {
                 
                 if (t % 5 == 0)
                     g2.drawString(String.valueOf(t), x - 5, 20);
-                
-                g2.setColor(new Color(230, 230, 230));
-                g2.setColor(Color.BLACK);
-                g2.setFont(new Font("Arial", Font.BOLD, 12));
-                int rodapeY = 30 + (tasksHistory.size() * ROW_HEIGHT) + 30;
-                g2.drawString("Tempo Ocioso das CPUs:", 15, rodapeY);
             }
+
 
             // Coluna Esquerda = nome das tarefas e fundo
             g2.setColor(new Color(245, 245, 245));
@@ -213,6 +225,11 @@ public class Window extends JFrame {
                 
                 // Desenho do bloco da tarefa tick a tick pelo histórico
                 for (int tick = 0; tick < currentTime; ++tick) {
+
+                    if (tick < t.getTempoChegada()) {
+                        continue; 
+                    }
+
                     Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tick);
                     int x = LABEL_WIDTH + (tick * TICK_WIDTH);
 
@@ -232,16 +249,20 @@ public class Window extends JFrame {
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
                     } else if (reg.estado == Tarefa.Estado.Esperando) {
-                        // Tarefa na fila de prontos = Ausência de cor (apenas borda cinza clara)
-                        g2.setColor(new Color(200, 200, 200));
+                        // NOVA LÓGICA: Tarefa aguardando = Listras Horizontais
+                        desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(180, 180, 180));
+                        g2.setColor(new Color(200, 200, 200)); // Borda cinza
+                        g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
+                        
+                    } else if (reg.estado == Tarefa.Estado.Finalizado) {
+                        // NOVA LÓGICA: Tarefa morta = Listras Verticais
+                        desenharListrasVerticais(g2, x, y + 5, TICK_WIDTH, 30, new Color(200, 200, 200));
+                        g2.setColor(new Color(220, 220, 220)); // Borda mais clara
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
                     }
 
                     // Verifica se ocorreu sorteio
                     if (reg.ocorreuSorteio) {
-                        // Debug no terminal para termos certeza que a UI sabe do sorteio
-                        System.out.println("UI: Desenhando Sorteio na T" + t.getId() + " no tick " + tick); 
-                        
                         // Desenha um círculo Vermelho
                         g2.setColor(Color.RED);
                         g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
@@ -251,9 +272,35 @@ public class Window extends JFrame {
                         g2.setFont(new Font("Arial", Font.BOLD, 9));
                         g2.drawString("S", x + TICK_WIDTH - 9, y + 11);
                     }
-                    
-                    // Se o estado for NaoCriada ou Finalizado, a tela não desenha nada
+                    // Se o estado for NaoCriada a tela não desenha nada
                 }
+            }
+            g2.setColor(Color.BLACK);
+            g2.setFont(new Font("Arial", Font.BOLD, 12));
+            int rodapeY = 30 + (tasksHistory.size() * ROW_HEIGHT) + 30;
+            String textoRodape = "Tempo Ocioso das CPUs: ";
+            if (controller != null) {
+                Processador[] cpusSimulacao = controller.getProcessadores();
+                for (int p = 0; p < cpusSimulacao.length; p++) {
+                    textoRodape += "[P" + p + "]: " + cpusSimulacao[p].getTempoOciosoTotal() + " ticks     ";
+                }
+            }
+            g2.drawString(textoRodape, 15, rodapeY);
+        }
+
+        // Método auxiliar: Listras Horizontais (Espera)
+        private void desenharListrasHorizontais(Graphics2D g2, int x, int y, int width, int height, Color cor) {
+            g2.setColor(cor);
+            for (int i = 2; i < height; i += 4) {
+                g2.drawLine(x, y + i, x + width, y + i);
+            }
+        }
+
+        // Método auxiliar: Listras Verticais (Finalizada)
+        private void desenharListrasVerticais(Graphics2D g2, int x, int y, int width, int height, Color cor) {
+            g2.setColor(cor);
+            for (int i = 2; i < width; i += 4) {
+                g2.drawLine(x + i, y, x + i, y + height);
             }
         }
 

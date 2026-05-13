@@ -91,7 +91,10 @@ public class SOMP {
 
         // 6. GRAVA O ESTADO E EXECUTA O TICK
         gravarHistorico();
-        for (Processador cpu : processadores) { cpu.executar(); }
+        for (Processador cpu : processadores) {
+            cpu.registrarOciosidade();
+            cpu.executar();
+        }
         ++tempoAtual;
     }
 
@@ -140,6 +143,10 @@ public class SOMP {
         return true; // Todas terminaram
     }
 
+    public Processador[] getProcessadores() {
+        return processadores;
+    }
+
     public void stepBack() {
         if (tempoAtual <= 0) return;
         --tempoAtual; // A máquina do tempo: volta 1 tick
@@ -161,6 +168,7 @@ public class SOMP {
         // Não se preocupe em devolvê-las ao Escalonador agora. Quando você clicar em "Próximo Passo", 
         // o novo método executar() (ali em cima) vai reconstruir a fila perfeitamente a partir da Lista Geral!
         for (Processador cpu : processadores) {
+            cpu.apagarRegistroOciosidade(tempoAtual);//desfaz o registro de ociosidade naquele tick
             cpu.setTarefaAtual(null);
             cpu.resetTicksNoQuantum(); 
         }

@@ -12,6 +12,10 @@ public class SimulationController {
             view.addTask(model.getTarefaByIdx(i));  // Tarefa Model para a View desenhar
         }
     }
+    
+    public Processador[] getProcessadores() {
+        return model.getProcessadores();
+    }
 
     public void stepForward(int currentViewTime) {
         if (model.isFinalizado()) {
