@@ -12,7 +12,7 @@ public class SimulationController {
             view.addTask(model.getTarefaByIdx(i));  // Tarefa Model para a View desenhar
         }
     }
-    
+
     public Processador[] getProcessadores() {
         return model.getProcessadores();
     }
@@ -61,5 +61,12 @@ public class SimulationController {
 
     public int getTotalNumTarefas() {
         return model.getTotalNumTarefas();
+    }
+
+    public boolean isSimulacaoFinalizada() {
+        if (model != null) {
+            return model.isFinalizado();
+        }
+        return false;
     }
 }

@@ -5,6 +5,12 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 // Interface principal do Simulador.
 public class Window extends JFrame {
@@ -54,6 +60,10 @@ public class Window extends JFrame {
                 controller.stepForward(currentTime);
             ganttPanel.revalidate();
             ganttPanel.repaint();
+            if (controller != null && controller.isSimulacaoFinalizada()) { 
+                gerarImagemDoGantt();
+                System.out.println("Simulação concluída passo a passo. Imagem gerada!");
+            }
         });
 
         btnBack.addActionListener(e -> {
@@ -68,6 +78,10 @@ public class Window extends JFrame {
                 controller.runAll();
             ganttPanel.revalidate();
             ganttPanel.repaint();
+            if (controller != null && controller.isSimulacaoFinalizada()) {
+                gerarImagemDoGantt();
+                System.out.println("Execução completa finalizada. Imagem gerada!");
+            }
         });
 
 
@@ -385,6 +399,52 @@ public class Window extends JFrame {
             
             g2.setColor(Color.BLACK);
             g2.fillRect(x + 16, 18, 14, 14);
+        }
+    }
+
+    private void gerarImagemDoGantt() {
+        // 1. Pega o tamanho TOTAL do painel, ignorando a barra de rolagem
+        int width = ganttPanel.getPreferredSize().width;
+        int height = ganttPanel.getPreferredSize().height;
+
+        // Salva o tamanho original para não quebrar a interface depois da foto
+        Dimension tamanhoOriginal = ganttPanel.getSize();
+        
+        // Estica o painel temporariamente para o tamanho total
+        ganttPanel.setSize(new Dimension(width, height));
+
+        // 2. Cria a imagem na memória
+        BufferedImage imagem = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = imagem.createGraphics();
+        
+        // Preenche o fundo com branco antes de desenhar (evita fundo preto no PNG)
+        g2.setColor(Color.WHITE);
+        g2.fillRect(0, 0, width, height);
+        
+        // 3. Manda o painel se desenhar dentro da imagem
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        ganttPanel.paint(g2); // Agora ele pinta tudo, pois demos o tamanho máximo pra ele
+        g2.dispose();
+
+        // Devolve o tamanho original pro painel voltar a caber no ScrollPane
+        ganttPanel.setSize(tamanhoOriginal);
+
+        // 4. Cria a pasta 'imagens' se ela não existir
+        File pasta = new File("imagens");
+        if (!pasta.exists()) {
+            pasta.mkdir();
+        }
+
+        // 5. Gera um nome único baseado na data e hora
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        File arquivoSaida = new File(pasta, "simulacao_" + timestamp + ".png");
+
+        // 6. Salva o arquivo no disco
+        try {
+            ImageIO.write(imagem, "png", arquivoSaida);
+            System.out.println("Imagem completa gerada com sucesso: " + arquivoSaida.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("Erro ao salvar a imagem: " + e.getMessage());
         }
     }
 }
