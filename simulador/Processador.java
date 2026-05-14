@@ -50,13 +50,6 @@ public class Processador {
         return tarefaAtual == null;
     }
 
-    public void stepBack() {
-        if (tarefaAtual != null) {
-            Tarefa.TickSnapshot atual = tarefaAtual.popHistorico();
-            tarefaAtual.popEvento();
-        }
-    
-    }
     public void registrarOciosidade() {
             // idle() deve ser o seu método que retorna true se a tarefaAtual for null
             historicoOcioso.add(this.idle()); 
