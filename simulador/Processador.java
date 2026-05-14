@@ -5,9 +5,9 @@ import java.util.List;
 
 public class Processador {
     private int id;
-    private Tarefa tarefaAtual; // Se for null, o processador está "desligado"
+    private Tarefa tarefaAtual; // Se for null o processador está desativado
     private int ticksNoQuantum; // Contador de ticks para controle de quantum
-    private List<Boolean> historicoOcioso = new ArrayList<>();// Histórico para controle de ociosidade (true = ocioso, false = ocupado)
+    private List<Boolean> historicoOcioso = new ArrayList<>();// Histórico para controle de ociosidade dos processadores
     
     public Processador(int id) {
         this.id = id;
@@ -16,7 +16,6 @@ public class Processador {
         this.historicoOcioso = new ArrayList<>();
     }
     
-    // Getters e setters básicos...
     public int getId() { return id; }
     public Tarefa getTarefaAtual() { return tarefaAtual; }
     public int getTicksNoQuantum() { return ticksNoQuantum; }
@@ -29,6 +28,7 @@ public class Processador {
         this.tarefaAtual = tarefaAtual;
     }
     
+    //Usado para a preempção
     public void resetTicksNoQuantum() { this.ticksNoQuantum = 0; }
 
 
@@ -53,27 +53,7 @@ public class Processador {
     public void stepBack() {
         if (tarefaAtual != null) {
             Tarefa.TickSnapshot atual = tarefaAtual.popHistorico();
-            // Tarefa.TickSnapshot anterior = tarefaAtual.peekHistorico(); acho q n precisa  
-            tarefaAtual.popEvento();  // Por consistencia
-            switch (atual.estado) {  // TODO
-            case NaoCriada:
-                break;
-
-            case Esperando:
-                break;
-
-            case Executando:
-                break;
-
-            case Suspenso:
-                break;
-
-            case Finalizado:
-                break;
-            
-            default:
-                break;
-            }
+            tarefaAtual.popEvento();
         }
     
     }
@@ -83,7 +63,7 @@ public class Processador {
     }
     
     public void apagarRegistroOciosidade(int tempo) {
-        // Remove a memória do futuro se voltarmos no tempo
+        // Remove o registro ao voltar o tempo
         if (tempo >= 0 && tempo < historicoOcioso.size()) {
             historicoOcioso.remove(tempo);
         }

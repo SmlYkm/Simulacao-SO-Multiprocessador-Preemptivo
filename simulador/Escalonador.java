@@ -9,13 +9,12 @@ public abstract class Escalonador {
         tarefas = new ArrayList<>();
     }
     
-    // Coloca a tarefa no final da fila (usado pelo SOMP na reconstrução)
+    // Coloca a tarefa no final da fila
     public void adicionarTarefa(Tarefa tarefa) {
         tarefas.add(tarefa);
     }
 
     // Limpa a fila atual para que o SOMP a reconstrua do zero a cada tick
-    // (Isto previne que tarefas "desapareçam" ao usar o botão Retroceder)
     public void limparFila() {
         this.tarefas.clear();
     }
@@ -31,12 +30,12 @@ public abstract class Escalonador {
         return null;
     }
 
-    // (Opcional) Remove da fila tarefas que já terminaram
+    // Remove da fila tarefas que já terminaram
     protected void removerTarefasFinalizadas() {
         tarefas.removeIf(Tarefa::isFinalizada);
     }
 
-    // Sorteia um valor aleatório para todas as tarefas na fila (para o Desempate 4)
+    // Sorteia um valor aleatório para todas as tarefas na fila (para o Desempate)
     protected void sortearValores() {
         for (Tarefa t : tarefas) {
             t.setValorSorteioAtual(Math.random());

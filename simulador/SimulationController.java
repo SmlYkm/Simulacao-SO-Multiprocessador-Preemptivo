@@ -49,7 +49,6 @@ public class SimulationController {
     public void changeTaskPriority(int taskIndex, int newPriority) {
         Tarefa t = model.getTarefaByIdx(taskIndex);
         t.setPrioridade(newPriority);
-        // Opcional: registrar no terminal a alteração
         System.out.println("Prioridade da T" + t.getId() + " alterada para " + newPriority);
     }
     

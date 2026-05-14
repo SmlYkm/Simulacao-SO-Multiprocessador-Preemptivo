@@ -6,16 +6,16 @@ public class Main {
         SOMP sistema = LeitorConfig.carregarSimulacao("config.txt");
 
         if (sistema != null) {
-            // Ela vai se comunicar com o sistema através do Controller.
+            // Se comunica com o sistema através do controller
             Window window = new Window("Simulador de Escalonamento MP");
 
             // Instancia o Controller passando o Model (sistema) e a View (window)
             SimulationController controller = new SimulationController(sistema, window);
             
-            // Injeta o Controller na View para que os botões funcionem
+            // Injeta o Controller na View para usar os botoes
             window.setController(controller); 
 
-            // Exibe a janela
+            //Exibe a janela
             window.showWindow();
             
         } else {
