@@ -44,27 +44,27 @@ public abstract class Escalonador {
 
     // A lógica matemática e central de desempate
     protected int desempate(Tarefa t1, Tarefa t2, Processador[] cpus) {
-        // Desempate 1: A tarefa já estava em execução imediatamente antes?
+        // Desempate 1: A tarefa já estava em execução imediatamente antes
         boolean t1EstavaExecutando = estavaExecutando(t1, cpus);
         boolean t2EstavaExecutando = estavaExecutando(t2, cpus);
         if (t1EstavaExecutando && !t2EstavaExecutando) return -1; // t1 ganha
         if (!t1EstavaExecutando && t2EstavaExecutando) return 1;  // t2 ganha
 
-        // Desempate 2: Instante de ingresso (quem chegou primeiro)
+        // Desempate 2: Instante de ingresso 
         int compareIngresso = Integer.compare(t1.getTempoChegada(), t2.getTempoChegada());
         if (compareIngresso != 0) return compareIngresso;
 
-        // Desempate 3: Duração da tarefa (menor duração total ganha)
+        // Desempate 3: Duração da tarefa
         int compareDuracao = Integer.compare(t1.getTempoExecucao(), t2.getTempoExecucao());
         if (compareDuracao != 0) return compareDuracao;
 
-        // Desempate 4: Sorteio (Avisa a interface gráfica que houve sorteio!)
+        // Desempate 4: Sorteio
         t1.setEnvolvidaEmSorteio(true);
         t2.setEnvolvidaEmSorteio(true); 
         return Double.compare(t1.getValorSorteioAtual(), t2.getValorSorteioAtual());
     }
 
-    // Método auxiliar para o Desempate 1 (verificar afinidade)
+    // Metodo auxiliar para o Desempate 1
     protected boolean estavaExecutando(Tarefa tarefa, Processador[] cpus) { 
         for (Processador cpu : cpus) {
             if (cpu.getTarefaAtual() != null && cpu.getTarefaAtual().getId() == tarefa.getId()) {
