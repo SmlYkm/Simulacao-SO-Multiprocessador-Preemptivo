@@ -18,7 +18,7 @@ public class LeitorConfig {
                 String[] config = linha.split(";"); 
                 
                 String algoritmo = config[0].replace("\uFEFF", "").trim(); // Remove Espaços e caracteres invisíveis 
-                int quantum = Integer.parseInt(config[1].trim());
+                Tarefa.setQuantum(Integer.parseInt(config[1].trim())); // Define o quantum para todas as tarefas
                 int qtdeCpus = Integer.parseInt(config[2].trim());
 
                 int alpha = 0; // Valor padrão
@@ -60,7 +60,7 @@ public class LeitorConfig {
                     throw new Exception("Algoritmo de escalonamento inválido no arquivo de configuração.");
                 }
 
-                sistema = new SOMP(escalonador, qtdeCpus, quantum);
+                sistema = new SOMP(escalonador, qtdeCpus);
             }
 
             // Lê as tarefas e eventos.
@@ -101,7 +101,7 @@ public class LeitorConfig {
                 JOptionPane.WARNING_MESSAGE);
 
             // Configuraçao default para caso a config.txt dê erro
-            sistema = new SOMP(new EscalonadorSRTF(), 2, 2); // 2 CPUs, Quantum 2
+            sistema = new SOMP(new EscalonadorSRTF(), 2); // 2 CPUs, Quantum 2
             sistema.adicionarTarefa(new Tarefa(1, "FF0000", 0, 5, 1, null)); // Tarefa Padrão
             sistema.adicionarTarefa(new Tarefa(2, "0000FF", 2, 3, 2, null)); // Tarefa Padrão
         }

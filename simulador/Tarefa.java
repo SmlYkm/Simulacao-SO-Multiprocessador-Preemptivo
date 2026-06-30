@@ -17,6 +17,8 @@ public class Tarefa {
     private boolean suspensa;
     private boolean envolvidaEmSorteio;
     private String cor;
+    private static int quantum;
+
     
     private List<Evento>       eventos;
     private List<TickSnapshot> historico;
@@ -72,6 +74,7 @@ public class Tarefa {
     public int getTempoRestante() { return tempoRestante; }
     public int getTempoChegada() { return tempoChegada; }
     public double getValorSorteioAtual() { return valorSorteioAtual; }
+    public int getQuantum() { return quantum; }
     public boolean isFinalizada() { return finalizada; }
     public boolean isSuspensa() { return suspensa; }
     public boolean isEnvolvidaEmSorteio() { return envolvidaEmSorteio; }
@@ -82,6 +85,7 @@ public class Tarefa {
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
     public void setValorSorteioAtual(double valorSorteioAtual) { this.valorSorteioAtual = valorSorteioAtual; }
     public void setFinalizada(boolean finalizada) { this.finalizada = finalizada; }
+    public static void setQuantum(int quantum) { Tarefa.quantum = quantum; }
     public void suspender(boolean suspensa) { this.suspensa = suspensa; }
     public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
     public void setCor(String cor) { this.cor = cor; }
@@ -131,9 +135,9 @@ public class Tarefa {
         }
     }
 
-    public void executar(int quantum) {
+    public void executar(int tempo) {
         if (tempoRestante > 0) {
-            tempoRestante -= quantum;
+            tempoRestante -= tempo;
             if (tempoRestante <= 0) {
                 tempoRestante = 0;
                 finalizada = true;

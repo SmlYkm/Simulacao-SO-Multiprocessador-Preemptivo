@@ -8,7 +8,7 @@ public class EscalonadorPRIOPENV extends Escalonador {
     }
 
     @Override
-    public void prepararFila(Processador[] cpus, int valorDoQuantum) {
+    public void prepararFila(Processador[] cpus) {
         // Sorteia novos valores aleatórios para o caso de precisar ir a sorteio
         sortearValores();
 

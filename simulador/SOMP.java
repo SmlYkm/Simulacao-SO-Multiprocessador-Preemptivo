@@ -7,17 +7,15 @@ public class SOMP {
     private Escalonador escalonador;
     private Processador[] processadores;
     private int tempoAtual;
-    private int quantum;
 
     private ArrayList<Tarefa> listaTarefasGeral;
 
-    public SOMP(Escalonador escalonador, int numProcessadores, int quantum) {
+    public SOMP(Escalonador escalonador, int numProcessadores) {
         this.escalonador = escalonador;
         this.processadores = new Processador[numProcessadores];
         for (int i = 0; i < numProcessadores; i++) {
             this.processadores[i] = new Processador(i);
         }
-        this.quantum = quantum;
         this.tempoAtual = 0;
 
         this.listaTarefasGeral = new ArrayList<>();
@@ -64,13 +62,13 @@ public class SOMP {
         // Verifica quantum por causa da preempção por tempo
         for (Processador cpu : processadores) {
             Tarefa t = cpu.getTarefaAtual();
-            if (t != null && cpu.getTicksNoQuantum() >= quantum) {
+            if (t != null && cpu.getTicksNoQuantum() >= t.getQuantum()) {
                 cpu.setTarefaAtual(null); // Expulsa da CPU
                 cpu.resetTicksNoQuantum();
             }
         }
 
-        escalonador.prepararFila(processadores, quantum);  
+        escalonador.prepararFila(processadores);  
 
         // Pega as tarefas da fila pela função obterproximatarefa
         List<Tarefa> topTarefas = new ArrayList<>();

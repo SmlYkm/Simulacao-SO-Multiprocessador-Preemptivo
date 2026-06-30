@@ -20,7 +20,7 @@ public abstract class Escalonador {
     }
 
     // Método abstrato: as classes filhas (SRTF, PRIOP) definem como ordenar a lista
-    public abstract void prepararFila(Processador[] cpus, int valorDoQuantum);
+    public abstract void prepararFila(Processador[] cpus);
 
     // O SOMP usa este método para ir buscar as próximas tarefas mais prioritárias
     public Tarefa obterProximaTarefa() {

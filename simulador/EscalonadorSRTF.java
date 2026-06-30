@@ -3,7 +3,7 @@ package simulador;
 public class EscalonadorSRTF extends Escalonador {
 
     @Override
-    public void prepararFila(Processador[] cpus, int valorDoQuantum) {
+    public void prepararFila(Processador[] cpus) {
         // Dá um número aleatório novo para cada tarefa neste tick usado pelo sorteio
         sortearValores(); 
 
