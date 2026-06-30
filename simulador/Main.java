@@ -1,25 +1,29 @@
 package simulador;
 
+import javax.swing.UIManager;
+import java.io.File;
+
 public class Main {
     public static void main(String[] args) {
-        
-        SOMP sistema = LeitorConfig.carregarSimulacao("config.txt");
-
-        if (sistema != null) {
-            // Ela vai se comunicar com o sistema através do Controller.
-            Window window = new Window("Simulador de Escalonamento MP");
-
-            // Instancia o Controller passando o Model (sistema) e a View (window)
-            SimulationController controller = new SimulationController(sistema, window);
-            
-            // Injeta o Controller na View para que os botões funcionem
-            window.setController(controller); 
-
-            // Exibe a janela
-            window.showWindow();
-            
-        } else {
-            System.out.println("Falha ao inicializar o sistema. Verifica o ficheiro de configuração.");
+        try {
+            UIManager.setLookAndFeel(
+                UIManager.getSystemLookAndFeelClassName()  // Mantém o visual nativo do sistema operacional
+            );
+        } catch (Exception e) {
+            // Ignora e usa o padrão do Java
         }
+
+        Window window        = new Window("Simulador de Escalonamento MP");
+        String arquivoPadrao = "config.txt";
+        File   file          = new File(arquivoPadrao);
+        
+        if (file.exists()) {
+            System.out.println("Arquivo padrão encontrado. Carregando...");
+            //window.carregarSimulacaoPorCaminho(arquivoPadrao);
+        } else {
+            System.out.println("Arquivo padrão 'config.txt' não encontrado. Iniciando vazio.");
+        }
+
+        window.showWindow();
     }
 }

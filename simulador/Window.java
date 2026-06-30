@@ -28,9 +28,12 @@ public class Window extends JFrame {
         JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         // Botões de controle de tempo
+        JButton btnLoadFile  = new JButton("Carregar Arquivo");
         JButton btnBack      = new JButton("(<) Retroceder");
         JButton btnStep      = new JButton("Próximo Passo (>)");
         JButton btnRunAll    = new JButton("Execução Completa (>>)");
+
+        btnLoadFile.addActionListener(e -> abrirSeletorDeArquivo());
 
         btnStep.addActionListener(e -> {
             if (controller != null) 
@@ -81,6 +84,47 @@ public class Window extends JFrame {
 
         setLocationRelativeTo(null);
     }
+
+
+    private void abrirSeletorDeArquivo() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Selecione o arquivo de configuração");
+        fileChooser.setCurrentDirectory(new java.io.File(System.getProperty("user.dir")));
+        int userSelection = fileChooser.showOpenDialog(this);
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
+            boolean sucesso     = carregarSimulacaoPorCaminho(selectedPath);
+            if (sucesso)
+                JOptionPane.showMessageDialog(
+                    this, 
+                    "Arquivo carregado com sucesso!", 
+                    "Sucesso", 
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+        }
+    }
+    public boolean carregarSimulacaoPorCaminho(String caminhoFicheiro) {  // Método universal que carrega um arquivo e reseta a interface
+        SOMP novoSistema = LeitorConfig.carregarSimulacao(caminhoFicheiro);
+        if (novoSistema != null) {
+            tasksHistory.clear();  // Limpa o estado atual da janela
+            currentTime = 0;
+            
+            SimulationController novoController = new SimulationController(novoSistema, this);  // Injeta novo controlador
+            this.setController(novoController);
+            
+            if (ganttPanel != null) {  // Atualiza a tela
+                ganttPanel.revalidate();
+                ganttPanel.repaint();
+            }
+            return true;
+        } else {
+            showError(
+                "Falha ao carregar: " + caminhoFicheiro + "\nVerifique o formato do arquivo."
+            );
+            return false;
+        }
+    }
+
 
     public void setController(SimulationController ctrl) {
         this.controller = ctrl;
