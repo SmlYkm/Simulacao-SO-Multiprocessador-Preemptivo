@@ -40,6 +40,10 @@ public class SimulationController {
     // A View chama este método quando o botão "Execução Completa" for clicado
     public void runAll() {
         while (!model.isFinalizado()) {
+            if (model.isTravado()) {  // Quebra o loop infinito se o sistema detectar que as tarefas restantes estão todas suspensas
+                view.showError("A simulação parou! As tarefas restantes estão suspensas.");
+                break;
+            }
             model.executar();
         }
         view.setCurrentTime(model.getTempoAtual());

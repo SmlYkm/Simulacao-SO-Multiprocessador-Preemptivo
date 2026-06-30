@@ -38,6 +38,19 @@ public class SOMP {
         return null;
     }
 
+    public boolean isTravado() {
+        for (Tarefa t : listaTarefasGeral) {
+            final boolean temp = !t.isFinalizada() && (
+                !t.isSuspensa() || t.getTempoChegada() > tempoAtual  // Se existe alguma tarefa que não está suspensa ou que ainda não chegou no sistema, a simulação pode progredir
+            );
+            
+            if (temp)
+                return false;  
+        }
+        
+        return true;  // Se o for terminar e não achar ninguém apto a rodar, o sistema está travado 
+    }
+
     public void executar() {  
         // Reconstroi a fila
         escalonador.limparFila();
@@ -134,9 +147,8 @@ public class SOMP {
     
     public boolean isFinalizado() {  // Verifica se todas as tarefas já terminaram
         for (Tarefa t : listaTarefasGeral) {
-            if (!t.isFinalizada()) {
+            if (!t.isFinalizada())
                 return false;       // Se encontrar uma que não terminou, retorna falso
-            }
         }
         return true; // Todas terminaram
     }

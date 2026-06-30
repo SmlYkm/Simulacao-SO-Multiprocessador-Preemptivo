@@ -3,14 +3,14 @@ package simulador;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.List;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 
 // Interface principal do Simulador
 // Model View Controller pattern
@@ -34,27 +34,20 @@ public class Window extends JFrame {
         setSize(1000, 600);
         setLayout(new BorderLayout());
 
-        JPanel superiorPanel = new JPanel(new BorderLayout());  // Painel Pai que vai ficar no topo da tela
-        superiorPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));  // Dá um respiro nas bordas
+        // Painel Superior: Estrutura que segura os botões na esquerda e a legenda na direita
+        JPanel superiorPanel = new JPanel(new BorderLayout());
+        superiorPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.LEFT));  // Cria o painel dos botões alinhado à esquerda
+        JPanel painelBotoes = new JPanel(new FlowLayout(FlowLayout.LEFT)); 
         
-        JButton btnBack   = new JButton("(<) Retroceder");
-        JButton btnStep   = new JButton("Próximo Passo (>)");
-        JButton btnRunAll = new JButton("Execução Completa (>>)");
+        JButton btnLoadFile  = new JButton("Carregar Arquivo");
+        JButton btnBack      = new JButton("(<) Retroceder");
+        JButton btnStep      = new JButton("Próximo Passo (>)");
+        JButton btnRunAll    = new JButton("Execução Completa (>>)");
         
-        // Adiciona os botões no painel da esquerda
-        painelBotoes.add(btnBack);
-        painelBotoes.add(btnStep);
-        painelBotoes.add(btnRunAll);
+        btnLoadFile.addActionListener(e -> abrirSeletorDeArquivo());
 
-        // Junta tudo no painel Superior
-        superiorPanel.add(painelBotoes, BorderLayout.WEST);         // Botões na esquerda
-        superiorPanel.add(new PainelLegenda(), BorderLayout.EAST);  // Legenda na direita
-
-        this.add(superiorPanel, BorderLayout.NORTH);  // Adiciona o painel superior na janela
-        
-        btnStep.addActionListener(e -> {  // Botão de step adiante
+        btnStep.addActionListener(e -> { 
             if (controller != null) 
                 controller.stepForward(currentTime);
             ganttPanel.revalidate();
@@ -65,14 +58,14 @@ public class Window extends JFrame {
             }
         });
 
-        btnBack.addActionListener(e -> {  // Botão de step para traz
+        btnBack.addActionListener(e -> { 
             if (controller != null)
                 controller.stepBack();
             ganttPanel.revalidate();
             ganttPanel.repaint();
         });
 
-        btnRunAll.addActionListener(e -> {  // Botão para rodar simulação até o fim
+        btnRunAll.addActionListener(e -> { 
             if (controller != null) 
                 controller.runAll();
             ganttPanel.revalidate();
@@ -83,6 +76,16 @@ public class Window extends JFrame {
             }
         });
 
+        painelBotoes.add(btnLoadFile);
+        painelBotoes.add(new JSeparator(SwingConstants.VERTICAL));
+        painelBotoes.add(btnBack);
+        painelBotoes.add(btnStep);
+        painelBotoes.add(btnRunAll);
+
+        superiorPanel.add(painelBotoes, BorderLayout.WEST);         // Botões na esquerda
+        superiorPanel.add(new PainelLegenda(), BorderLayout.EAST);  // Legenda na direita
+
+        this.add(superiorPanel, BorderLayout.NORTH); 
 
         // Gráfico de Gantt
         ganttPanel             = new GanttPanel();
@@ -105,6 +108,48 @@ public class Window extends JFrame {
         setLocationRelativeTo(null);
     }
 
+    private void abrirSeletorDeArquivo() {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Selecione o arquivo de configuração");
+        fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+        
+        int userSelection = fileChooser.showOpenDialog(this);
+        
+        if (userSelection == JFileChooser.APPROVE_OPTION) {
+            String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
+            boolean sucesso     = carregarSimulacaoPorCaminho(selectedPath);
+            if (sucesso) {
+                JOptionPane.showMessageDialog(
+                    this, 
+                    "Arquivo carregado com sucesso!", 
+                    "Sucesso", 
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+            }
+        }
+    }
+
+    public boolean carregarSimulacaoPorCaminho(String caminhoFicheiro) {  
+        SOMP novoSistema = LeitorConfig.carregarSimulacao(caminhoFicheiro);
+        if (novoSistema != null) {
+            tasksHistory.clear();
+            currentTime = 0;
+            
+            SimulationController novoController = new SimulationController(novoSistema, this);
+            this.setController(novoController);
+            
+            if (ganttPanel != null) { 
+                ganttPanel.revalidate();
+                ganttPanel.repaint();
+            }
+            return true;
+        } else {
+            // O próprio LeitorConfig já disparou o Pop-up visual se não houver CPUs suficientes.
+            // Aqui apenas garantimos que a interface não quebre.
+            return false;
+        }
+    }
+
     public void setController(SimulationController ctrl) {
         this.controller = ctrl;
     }
@@ -121,14 +166,14 @@ public class Window extends JFrame {
         JOptionPane.showMessageDialog(this, msg);
     }
 
-    public void addTask(Tarefa t) {  // Injeta tarefas e atualiza tela
+    public void addTask(Tarefa t) {  
         tasksHistory.add(t);
         ganttPanel.revalidate(); 
         ganttPanel.repaint();
     }
 
-    private void openTaskOptions(int idx) {  // Abre menu para modificar atributos
-        Tarefa t = tasksHistory.get(idx);  // Pega apenas pra ler dados pra interface
+    private void openTaskOptions(int idx) { 
+        Tarefa t = tasksHistory.get(idx);  
         JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + t.getId());
         
         JMenuItem prioritySetter = new JMenuItem(new AbstractAction("Alterar prioridadeEstatica") {
@@ -140,10 +185,10 @@ public class Window extends JFrame {
                     JOptionPane.QUESTION_MESSAGE
                 );
 
-                if (input != null && !input.trim().isEmpty()) {  // Validação
+                if (input != null && !input.trim().isEmpty()) { 
                     try {
                         int priority = Integer.parseInt(input.trim());
-                        if (controller != null)  // Chama o controller para alterar no Model
+                        if (controller != null) 
                             controller.changeTaskPriority(idx, priority);
                         ganttPanel.repaint(); 
                     } catch (NumberFormatException ex) {
@@ -154,28 +199,38 @@ public class Window extends JFrame {
         });
 
         String suspLabel = t.isSuspensa() ? "Retomar Tarefa" : "Suspender Tarefa";
-        JMenuItem suspendTaskSetter = new JMenuItem(new AbstractAction(suspLabel) { // Ação de suspender task
+        JMenuItem suspendTaskSetter = new JMenuItem(new AbstractAction(suspLabel) { 
             public void actionPerformed(ActionEvent e) {
-                if (controller != null) controller.toggleTaskSuspension(idx);
+                if (controller != null) 
+                    controller.toggleTaskSuspension(idx);
                 ganttPanel.repaint(); 
             }
         });
 
         menu.add(prioritySetter);
         menu.add(suspendTaskSetter);
-        menu.show(ganttPanel, 10, ((controller.getTotalNumTarefas() - idx - 1) * ROW_HEIGHT) + 50);
+        menu.show(
+            ganttPanel, 
+            10, 
+            ((controller.getTotalNumTarefas() - idx - 1) * ROW_HEIGHT) + 50
+        );
     }
 
-    private class GanttPanel extends JPanel {  // Painel de renderização do Gantt
+    public void incrementTime() {
+        ++currentTime;
+        ganttPanel.revalidate();
+        ganttPanel.repaint();
+    }
+
+    private class GanttPanel extends JPanel { 
         public GanttPanel() {
             setBackground(Color.WHITE);
         }
 
         @Override
-        public Dimension getPreferredSize() {  
-            // O gráfico cresce para a direita conforme o tempo passa
-            int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100;
-            int height = (tasksHistory.size() * ROW_HEIGHT) + 100;
+        public Dimension getPreferredSize() {
+            int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100; 
+            int height = (tasksHistory.size() * ROW_HEIGHT)       + 100;
             return new Dimension(
                 Math.max(width, getParent().getWidth()), 
                 height
@@ -188,61 +243,47 @@ public class Window extends JFrame {
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int yBottom = 30 + (tasksHistory.size() * ROW_HEIGHT);  // Limite inferior das tarefsa
+            int yBottom = 30 + (tasksHistory.size() * ROW_HEIGHT);  // Limite inferior das tarefas
 
-            for (int t = 0; t <= currentTime; ++t) {  // Desenha grade e o novo eixo x
+            for (int t = 0; t <= currentTime; ++t) { 
                 int x = LABEL_WIDTH + (t * TICK_WIDTH);
                 
-                // Linha vertical do grid (vai até um pouco abaixo da última tarefa)
                 g2.setColor(new Color(230, 230, 230));
                 g2.drawLine(x, 0, x, yBottom + 5); 
                 
-                if (t % 5 == 0) {  // Desenha números de tempo embaixo das tarefas
+                if (t % 5 == 0) { 
                     g2.setColor(Color.DARK_GRAY);
-                    // O "yBottom + 20" coloca os números logo abaixo da linha final
                     g2.drawString(String.valueOf(t), x - 5, yBottom + 20); 
                 }
             }
 
-            g2.setColor(Color.BLACK);  // Desenha linha horizontal final
+            g2.setColor(Color.BLACK); 
             g2.drawLine(0, yBottom, getWidth(), yBottom);
 
-            g2.setColor(Color.BLACK);  // Reposiciona rodapé de cpus mais para baixo
-            g2.setFont(new Font("Arial", Font.BOLD, 12));
-            int rodapeY = yBottom + 50; // Espaço para não encavalar com os números
-            String textoRodape = "Tempo Ocioso das CPUs: ";
-            if (controller != null) {
-                Processador[] cpus_simulacao = controller.getProcessadores();
-                for (int p = 0; p < cpus_simulacao.length; p++) {
-                    textoRodape += "[P" + p + "]: " + cpus_simulacao[p].getTempoOciosoTotal() + " ticks     ";
-                }
-            }
-            g2.drawString(textoRodape, 15, rodapeY);
-
-            g2.setColor(new Color(245, 245, 245));  // Coluna esquerad -> fundo e linha divisória
+            g2.setColor(new Color(245, 245, 245)); 
             g2.fillRect(0, 0, LABEL_WIDTH, yBottom);
             g2.setColor(Color.BLACK);
             g2.drawLine(LABEL_WIDTH, 0, LABEL_WIDTH, yBottom + 5);
 
-            for (int i = 0; i < tasksHistory.size(); ++i) {  // Desenhar tasks
+            for (int i = 0; i < tasksHistory.size(); ++i) { 
                 int y    = 30 + ((tasksHistory.size() - 1 - i) * ROW_HEIGHT);
                 Tarefa t = tasksHistory.get(i);
                 
-                g2.setColor(Color.BLACK);  // Desenhar nome da tarefa
+                g2.setColor(Color.BLACK); 
                 g2.setFont(new Font("Arial", Font.PLAIN, 12));
                 g2.drawString("Tarefa T" + t.getId(), 15, y + 25);
                 
-                g2.setColor(new Color(220, 220, 220));  // Desenhar linha separadora horizontal para cada tarefa
+                g2.setColor(new Color(220, 220, 220)); 
                 g2.drawLine(0, y + ROW_HEIGHT, getWidth(), y + ROW_HEIGHT);
                 
-                for (int tick = 0; tick < currentTime; ++tick) {  // Desenho do bloco da tarefa tick a tick
-                    if (tick < t.getTempoChegada())  // Pula os ticks antes da tarefa chegar
+                for (int tick = 0; tick < currentTime; ++tick) { 
+                    if (tick < t.getTempoChegada()) 
                         continue; 
 
                     Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tick);
                     int x = LABEL_WIDTH + (tick * TICK_WIDTH);
 
-                    if (reg.estado == Tarefa.Estado.Executando) {  // Desenha tarefa executando -> colorido
+                    if (reg.estado == Tarefa.Estado.Executando) { 
                         g2.setColor(Color.decode(t.getCor()));
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
@@ -250,22 +291,22 @@ public class Window extends JFrame {
                         g2.setFont(new Font("Arial", Font.BOLD, 12));
                         g2.drawString("P" + reg.cpuId, x + 5, y + 25);
     
-                    } else if (reg.estado == Tarefa.Estado.Suspenso) {  // Desenha tarefa suspensa -> preto
+                    } else if (reg.estado == Tarefa.Estado.Suspenso) { 
                         g2.setColor(Color.BLACK);
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
-                    } else if (reg.estado == Tarefa.Estado.Esperando) {  // Desenha tarefa esperando -> linhas horizontais
+                    } else if (reg.estado == Tarefa.Estado.Esperando) { 
                         desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(180, 180, 180));
                         g2.setColor(new Color(200, 200, 200)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
                         
-                    } else if (reg.estado == Tarefa.Estado.Finalizado) {  // Desenha tarefa pronta -> linhas verticasis
+                    } else if (reg.estado == Tarefa.Estado.Finalizado) { 
                         desenharListrasVerticais(g2, x, y + 5, TICK_WIDTH, 30, new Color(200, 200, 200));
                         g2.setColor(new Color(220, 220, 220)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
                     }
 
-                    if (reg.ocorreuSorteio) {  // Desenha bolinha vermelha onde houve sorteio
+                    if (reg.ocorreuSorteio) { 
                         g2.setColor(Color.RED);
                         g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
                         
@@ -275,6 +316,22 @@ public class Window extends JFrame {
                     }
                 }
             }
+
+            // Rodapé com Proteção contra Null
+            g2.setColor(Color.BLACK); 
+            g2.setFont(new Font("Arial", Font.BOLD, 12));
+            int rodapeY = yBottom + 50; 
+            String textoRodape = "Tempo Ocioso das CPUs: ";
+            
+            if (controller != null) {
+                Processador[] cpus_simulacao = controller.getProcessadores();
+                if (cpus_simulacao != null) { 
+                    for (int p = 0; p < cpus_simulacao.length; p++) {
+                        textoRodape += "[P" + p + "]: " + cpus_simulacao[p].getTempoOciosoTotal() + " ticks     ";
+                    }
+                }
+            }
+            g2.drawString(textoRodape, LABEL_WIDTH + 15, rodapeY);
         }
 
         private void desenharListrasHorizontais(Graphics2D g2, int x, int y, int width, int height, Color cor) {
@@ -290,17 +347,16 @@ public class Window extends JFrame {
                 g2.drawLine(x + i, y, x + i, y + height);
             }
         }
-
     }
 
     public void showWindow() { 
         setVisible(true); 
     }
 
-    class PainelLegenda extends JPanel {  // Classe que desenha a legenda na barra de botões
+    class PainelLegenda extends JPanel { 
         public PainelLegenda() {
-            setPreferredSize(new Dimension(240, 40));  // Define o tamanho fixo ideal para caber 4 legendas 
-            setOpaque(false); // Fundo transparente para combinar com a janela
+            setPreferredSize(new Dimension(240, 40)); 
+            setOpaque(false); 
         }
 
         @Override
@@ -309,21 +365,21 @@ public class Window extends JFrame {
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            int x = 0; // Ponto de partida
+            int x = 0; 
             
-            g2.setColor(Color.BLACK);  // Sorteio
+            g2.setColor(Color.BLACK);  
             g2.setFont(new Font("Arial", Font.PLAIN, 10));
             g2.drawString("Sorteio", x, 12);
             
             g2.setColor(Color.RED);
-            g2.fillOval(x + 10, 18, 14, 14); // Bolinha vermelha
+            g2.fillOval(x + 10, 18, 14, 14); 
             g2.setColor(Color.WHITE);
             g2.setFont(new Font("Arial", Font.BOLD, 10));
-            g2.drawString("S", x + 14, 29); // Letra S
+            g2.drawString("S", x + 14, 29); 
             
-            x += 50; // Avança para o lado
+            x += 50; 
             
-            g2.setColor(Color.BLACK);  // Pronto/Esperando -> listras horizontais
+            g2.setColor(Color.BLACK);  
             g2.setFont(new Font("Arial", Font.PLAIN, 10));
             g2.drawString("Pronta", x, 12);
             
@@ -335,7 +391,7 @@ public class Window extends JFrame {
             
             x += 55;
             
-            g2.setColor(Color.BLACK);  // Finalixada -> listras verticais
+            g2.setColor(Color.BLACK);  
             g2.setFont(new Font("Arial", Font.PLAIN, 10));
             g2.drawString("Finalizada", x, 12);
             
@@ -347,7 +403,7 @@ public class Window extends JFrame {
             
             x += 65;
             
-            g2.setColor(Color.BLACK);  // Suspenso -> preto
+            g2.setColor(Color.BLACK);  
             g2.setFont(new Font("Arial", Font.PLAIN, 10));
             g2.drawString("Suspensa", x, 12);
             
@@ -357,36 +413,33 @@ public class Window extends JFrame {
     }
 
     private void gerarImagemDoGantt() {
-        // Tamanho total do painel sem a barra de rolagem
         int width = ganttPanel.getPreferredSize().width;
         int height = ganttPanel.getPreferredSize().height;
 
-        Dimension tamanhoOriginal = ganttPanel.getSize();  // Tamanho original -> salvar para manter interface depois da foto
-        ganttPanel.setSize(new Dimension(width, height));  // Estica o painel temporariamente para o tamanho total
+        Dimension tamanhoOriginal = ganttPanel.getSize(); 
+        ganttPanel.setSize(new Dimension(width, height)); 
 
-        BufferedImage imagem = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);  // Cria a imagem na memória
-        Graphics2D g2 = imagem.createGraphics();  // Cria image na memoria
+        BufferedImage imagem = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB); 
+        Graphics2D g2 = imagem.createGraphics(); 
         
-        g2.setColor(Color.WHITE);  // Preenche o fundo com branco
+        g2.setColor(Color.WHITE); 
         g2.fillRect(0, 0, width, height);
         
-        // Manda painel se desenhar dentro da imagem
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         ganttPanel.paint(g2); 
         g2.dispose();
 
-        ganttPanel.setSize(tamanhoOriginal);  // Devolve o tamanho original pro painel voltar a caber no ScrollPane
+        ganttPanel.setSize(tamanhoOriginal); 
 
-        File pasta = new File("imagens");  // Cria pasta se ela não existe ainda
+        File pasta = new File("imagens"); 
         if (!pasta.exists()) {
             pasta.mkdir();
         }
 
-        // Gera nome usando data e hora
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
         File arquivoSaida = new File(pasta, "simulacao_" + timestamp + ".png");
 
-        try {  // Salva
+        try { 
             ImageIO.write(imagem, "png", arquivoSaida);
             System.out.println("Imagem completa gerada com sucesso: " + arquivoSaida.getAbsolutePath());
         } catch (IOException e) {
