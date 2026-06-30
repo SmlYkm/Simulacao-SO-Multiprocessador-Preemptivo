@@ -1,6 +1,7 @@
 package simulador;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SOMP {
     private Escalonador escalonador;
@@ -27,11 +28,6 @@ public class SOMP {
         this.listaTarefasGeral.add(t);
     }
 
-    // Método para o Main poder puxar a lista de tarefas e enviar para a Window:
-    // public List<Tarefa> getListaTarefasGeral() {
-    //     return listaTarefasGeral;
-    // }
-
     public int getTotalNumTarefas() {
         return listaTarefasGeral.size();
     }
@@ -55,16 +51,58 @@ public class SOMP {
         return true;  // Se o for terminar e não achar ninguém apto a rodar, o sistema está travado 
     }
 
-    public void executar() {  // Execução de 1 tick
-        for (Tarefa tarefa : listaTarefasGeral) {      // Coloca tarefas que chegaram agora no escalonador
-            if (tarefa.getTempoChegada() == tempoAtual)
-                escalonador.adicionarTarefa(tarefa);
+    public void executar() {  
+        // Reconstroi a fila
+        escalonador.limparFila();
+        for (Tarefa t : listaTarefasGeral) {
+            // Se a tarefa está pronta ainda não acabou e não está suspensa entra na fila
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa()) {
+                escalonador.adicionarTarefa(t);
+            }
         }
 
-        escalonador.executar(processadores, quantum);  // Escalonador executa seu algoritmo
+        // Verifica quantum por causa da preempção por tempo
+        for (Processador cpu : processadores) {
+            Tarefa t = cpu.getTarefaAtual();
+            if (t != null && cpu.getTicksNoQuantum() >= quantum) {
+                cpu.setTarefaAtual(null); // Expulsa da CPU
+                cpu.resetTicksNoQuantum();
+            }
+        }
+
+        // Organiza a fila
+        escalonador.prepararFila(processadores, quantum);  
+
+        // Pega as tarefas da fila pela função obterproximatarefa
+        List<Tarefa> topTarefas = new ArrayList<>();
+        for (int i = 0; i < processadores.length; i++) {
+            Tarefa proxima = escalonador.obterProximaTarefa();
+            if (proxima != null) {
+                topTarefas.add(proxima);
+            }
+        }
+
+        // Distribui as tarefas nos processadores mantendo a afinidade com as tarefas
+        for (Processador cpu : processadores) {
+            Tarefa tarefaAtual = cpu.getTarefaAtual();
+            if (tarefaAtual != null && topTarefas.contains(tarefaAtual)) {
+                topTarefas.remove(tarefaAtual); // Continua no mesmo processador
+            } else {
+                cpu.setTarefaAtual(null); // Sai do processador
+            }
+        }
+        //Atribui as tarefas restantes
+        for (Processador cpu : processadores) { 
+            if (cpu.idle() && !topTarefas.isEmpty()) {
+                cpu.setTarefaAtual(topTarefas.remove(0));  
+            }
+        }
+
+        // Grava o estado e executa o tick
         gravarHistorico();
-        for (Processador cpu : processadores) {        // Executa 1 tick por processador
-            cpu.executar();                       
+        for (Processador cpu : processadores) {
+            cpu.registrarOciosidade();
+            cpu.executar();
         }
         ++tempoAtual;
     }
@@ -82,7 +120,7 @@ public class SOMP {
                 continue;
             }
 
-            int cpuId = -1;  // Descobre se a tarefa está em alguma cpu
+            int cpuId = -1;  // Descobre se a tarefa está em algum processador
             for (Processador proc : processadores) {
                 if (
                     proc.getTarefaAtual()         != null && 
@@ -113,26 +151,33 @@ public class SOMP {
         return true; // Todas terminaram
     }
 
-public void stepBack() {
-        if (tempoAtual <= 0)
-            return;
-        
-        --tempoAtual; // Volta o relógio do sistema
+    public Processador[] getProcessadores() {
+        return processadores;
+    }
 
+    public void stepBack() {
+        if (tempoAtual <= 0) return;
+        --tempoAtual; //Volta 1 tick
+
+        // Restaura o valor das tarefas
         for (Tarefa t : listaTarefasGeral) {
-            boolean estavaFinalizada = t.isFinalizada();
+            Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
-            t.stepBack(); // A tarefa restaura seu próprio tempo e desmarca o finalizada se necessário
+            if (reg.estado == Tarefa.Estado.Executando) {
+                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
+                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
+            }
             
-            if (estavaFinalizada && !t.isFinalizada() && !escalonador.tarefas.contains(t))  // Se a tarefa reviveu, precisa ser colocada de volta na fila
-                escalonador.adicionarTarefa(t);
-
-            if (t.getTempoChegada() == tempoAtual)  // Se, ao voltar no tempo, a tarefa ainda não chegou ao sistema, ela é removida da lista de prontos
-                escalonador.tarefas.remove(t);
+            // Apaga a coluna a frente
+            t.apagarRegistroNoTempo(tempoAtual);
         }
 
-        for (Processador p : processadores) {  // Retrocede o estado interno das CPUs
-            p.stepBack();
+        // Limpa os processadores
+        // O método executar vai reconstruir a fila a partir da lista geral
+        for (Processador cpu : processadores) {
+            cpu.apagarRegistroOciosidade(tempoAtual); //desfaz o registro de ociosidade naquele tick
+            cpu.setTarefaAtual(null);
+            cpu.resetTicksNoQuantum(); 
         }
     }
 }

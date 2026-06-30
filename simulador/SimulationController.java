@@ -13,6 +13,10 @@ public class SimulationController {
         }
     }
 
+    public Processador[] getProcessadores() {
+        return model.getProcessadores();
+    }
+
     public void stepForward(int currentViewTime) {
         if (model.isFinalizado()) {
             view.showError("A simulação já terminou!");
@@ -49,7 +53,6 @@ public class SimulationController {
     public void changeTaskPriority(int taskIndex, int newPriority) {
         Tarefa t = model.getTarefaByIdx(taskIndex);
         t.setPrioridade(newPriority);
-        // Opcional: registrar no terminal a alteração
         System.out.println("Prioridade da T" + t.getId() + " alterada para " + newPriority);
     }
     
@@ -61,5 +64,12 @@ public class SimulationController {
 
     public int getTotalNumTarefas() {
         return model.getTotalNumTarefas();
+    }
+
+    public boolean isSimulacaoFinalizada() {
+        if (model != null) {
+            return model.isFinalizado();
+        }
+        return false;
     }
 }

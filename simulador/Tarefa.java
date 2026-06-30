@@ -59,7 +59,6 @@ public class Tarefa {
         this.historico = new ArrayList<>();
     }
 
-    // Getters e setters
     public int getId() { return id; }
     public int getPrioridade() { return prioridade; }
     public int getTempoExecucao() { return tempoExecucao; }
@@ -80,15 +79,16 @@ public class Tarefa {
     public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }
+    public void apagarRegistroNoTempo(int tempo) { if(tempo >= 0 && tempo < historico.size()) historico.remove(tempo); }
 
-    // Método para o SOMP gravar o que aconteceu neste tick
+    // Método para gravar o que aconteceu neste tick
     public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
 
         if (this.envolvidaEmSorteio) {
             System.out.println("Salvando histórico: A T" + this.id + " TEM sorteio no tick " + tempoAtual);
         }
         
-        // Preenche buracos se o tempo der saltos (segurança)
+        // Preenche buracos se o tempo der saltos, por segurança
         while (historico.size() <= tempoAtual) {
             historico.add(new TickSnapshot(Estado.NaoCriada, -1, false));
         }
@@ -115,36 +115,18 @@ public class Tarefa {
         }
     }
 
-    public Evento popEvento() {  // Remove ultimo evento, como se fosse uma stack
+    public Evento popEvento() {  // Remove ultimo evento
         if (eventos.isEmpty())
             return null;
         int idx = eventos.size() - 1;
         return eventos.remove(idx);
     }
 
-    public TickSnapshot popHistorico() {
+    public TickSnapshot popHistorico() { //Remove o ultimo estado do historico
         if (historico.isEmpty())
             return null;
         int idx = historico.size() - 1;
         return historico.remove(idx);
     }
 
-    public TickSnapshot peekHistorico() {
-        if (historico.isEmpty())
-            return null;
-        int idx = historico.size() - 1;
-        return historico.get(idx);
-    }
-
-    public void stepBack() {
-        TickSnapshot desfeito = popHistorico(); // Tira o registro do estado futuro que estamos desfazendo
-        
-        if (desfeito != null) {
-            if (desfeito.estado == Estado.Executando)
-                ++tempoRestante; // Se ela rodou nesse tick, devolvemos o tempo de execução
-            
-            if (tempoRestante > 0)  // Se recuperou o tempoRestante, garantimos que ela reviveu (não está mais finalizada)
-                finalizada = false;
-        }
-    }
 }
