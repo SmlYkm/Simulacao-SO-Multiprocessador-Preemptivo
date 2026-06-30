@@ -51,22 +51,30 @@ public class SOMP {
         return true;  // Se o for terminar e não achar ninguém apto a rodar, o sistema está travado 
     }
 
-    public void executar() {  
+    public void executar() {
+
+        for (Processador cpu : processadores) {            // Verifica quantum por causa da preempção por tempo
+            Tarefa t = cpu.getTarefaAtual();
+            
+            if (t != null) {
+                if (t.isBloqueada()) {
+                    cpu.setTarefaAtual(null); // Sai para fazer I/O
+                    cpu.resetTicksNoQuantum();
+            
+                } else if (cpu.getTicksNoQuantum() >= quantum) {
+                    cpu.setTarefaAtual(null); // Expulsa da CPU pelo tempo
+                    cpu.resetTicksNoQuantum();
+                }
+            }
+        }
+
+
         // Reconstroi a fila
         escalonador.limparFila();
         for (Tarefa t : listaTarefasGeral) {
             // Se a tarefa está pronta ainda não acabou e não está suspensa entra na fila
             if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa()) {
                 escalonador.adicionarTarefa(t);
-            }
-        }
-
-        // Verifica quantum por causa da preempção por tempo
-        for (Processador cpu : processadores) {
-            Tarefa t = cpu.getTarefaAtual();
-            if (t != null && cpu.getTicksNoQuantum() >= quantum) {
-                cpu.setTarefaAtual(null); // Expulsa da CPU
-                cpu.resetTicksNoQuantum();
             }
         }
 
@@ -93,6 +101,7 @@ public class SOMP {
                 cpu.setTarefaAtual(null); // Sai do processador
             }
         }
+
         //Atribui as tarefas restantes
         for (Processador cpu : processadores) { 
             if (cpu.idle() && !topTarefas.isEmpty()) {
@@ -106,17 +115,30 @@ public class SOMP {
             cpu.registrarOciosidade();
             cpu.executar();
         }
+
+        for (Tarefa t : listaTarefasGeral) {
+            if (t.isBloqueada())
+                t.executarIO(); // O dispositivo de I/O progride
+        }
+
         ++tempoAtual;
     }
 
     private void gravarHistorico() {
         for (Tarefa tarefa : listaTarefasGeral) {
+            
             if (tarefa.isFinalizada()) {                         // Terminou
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1);
                 continue;
+            
             } else if (tarefa.isSuspensa()) {                    // Suspenso
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1);
                 continue;
+            
+            } else if (tarefa.isBloqueada()) {                   // Fazendo IO
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Bloqueado, -1);
+                continue;
+            
             } else if (tarefa.getTempoChegada() > tempoAtual) {  // Tarefa ainda não foi criada
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1);
                 continue;
@@ -161,17 +183,18 @@ public class SOMP {
         if (tempoAtual <= 0) return;
         --tempoAtual; //Volta 1 tick
 
-        // Restaura o valor das tarefas
-        for (Tarefa t : listaTarefasGeral) {
+        for (Tarefa t : listaTarefasGeral) {                   // Restaura o valor das tarefas
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
             if (reg.estado == Tarefa.Estado.Executando) {
-                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
-                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
+                t.setTempoRestante(t.getTempoRestante() + 1);  // Devolve o tempo que tinha gasto
+                t.setFinalizada(false);            // Ressuscita a tarefa caso ela tenha morrido neste tick
+            
+            } else if (reg.estado == Tarefa.Estado.Bloqueado) { 
+                t.reverterTickIO(); 
             }
             
-            // Apaga a coluna a frente
-            t.apagarRegistroNoTempo(tempoAtual);
+            t.apagarRegistroNoTempo(tempoAtual);                // Apaga a coluna a frente
         }
 
         // Limpa os processadores

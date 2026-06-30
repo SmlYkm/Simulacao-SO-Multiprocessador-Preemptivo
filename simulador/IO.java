@@ -2,13 +2,15 @@ package simulador;
 
 public class IO extends Evento {
     private int     tempoExecutado;
+    private int     tempoExecucao;
     private boolean finalizado;
 
 
     public IO(int tempoChegada, int tempoExecucao) {
-        super(tempoChegada, tempoExecucao);
-        tempoExecutado = 0;
-        finalizado     = false;
+        super(tempoChegada);
+        this.tempoExecucao  = tempoExecucao;
+        this.tempoExecutado = 0;
+        this.finalizado     = false;
     }
 
 
@@ -18,26 +20,34 @@ public class IO extends Evento {
         
         } else if (!finalizado && tempoExecutado == tempoExecucao) {  // Marca como finalizado e gera interrupção
             finalizado = true;
-            interrupcao();
+            // interrupcao();
         } 
     }
 
-
-    private void interrupcao() {
-        // TODO
+    
+    public int getTempoExecucao() {
+        return tempoExecucao;
     }
 
 
-    public boolean ativo() {
+    public int getTempoExecutado() {
+        return tempoExecutado;
+    }
+
+
+    // private void interrupcao() {
+    //     // 
+    // }
+
+
+    public boolean isFinalizado() {
         return finalizado;
     }
 
 
-    public void setpBack(boolean emTratamento) {  // Volta 1 tick no tempo
-        if (!emTratamento)                        // Se não estava executando no tick atual não precisa fazer nada
-            return;
-
-        --tempoExecutado;
+    public void stepBack() {  // Volta 1 tick no tempo
+        if (tempoExecutado > 0)
+            --tempoExecutado;
         if (finalizado)
             finalizado = false;
     }

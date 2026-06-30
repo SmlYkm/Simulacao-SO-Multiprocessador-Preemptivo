@@ -77,14 +77,23 @@ public class LeitorConfig {
 
                 Tarefa novaTarefa = new Tarefa(id,cor, ingresso, duracao, prioridadeEstatica, null); // Passa null para a lista de eventos por enquanto
 
-                // Trata lista de eventos (não está sendo usada ainda).
+
+                // Trata lista de eventos de I/O
                 if (dados.length > 5 && !dados[5].trim().isEmpty()) {
                     String[] listaEventos = dados[5].split(",");
+
                     for (String strEvento : listaEventos) {
                         strEvento = strEvento.trim();
-                        // Aqui vai instanciar os eventos
-                        // Exemplo se for um evento de E/S
-                        // novaTarefa.adicionarEvento(new EventoES(...));
+
+                        if (strEvento.startsWith("IO")) {
+                            String[] partes = strEvento.substring(2).split(":");
+                        
+                            if (partes.length == 2) {
+                                int inicio    = Integer.parseInt(partes[0]);
+                                int duracaoIO = Integer.parseInt(partes[1]);
+                                novaTarefa.adicionarEvento(new IO(inicio, duracaoIO));
+                            }
+                        }
                     }
                 }
 
