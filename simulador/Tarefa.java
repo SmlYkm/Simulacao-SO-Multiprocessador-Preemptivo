@@ -137,6 +137,14 @@ public class Tarefa {
     }
 
     public void stepBack() {
-        // TODO
+        TickSnapshot desfeito = popHistorico(); // Tira o registro do estado futuro que estamos desfazendo
+        
+        if (desfeito != null) {
+            if (desfeito.estado == Estado.Executando)
+                ++tempoRestante; // Se ela rodou nesse tick, devolvemos o tempo de execução
+            
+            if (tempoRestante > 0)  // Se recuperou o tempoRestante, garantimos que ela reviveu (não está mais finalizada)
+                finalizada = false;
+        }
     }
 }

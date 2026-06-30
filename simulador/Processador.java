@@ -49,29 +49,11 @@ public class Processador {
     }
 
     public void stepBack() {
-        if (tarefaAtual != null) {
-            Tarefa.TickSnapshot atual = tarefaAtual.popHistorico();
-            // Tarefa.TickSnapshot anterior = tarefaAtual.peekHistorico(); acho q n precisa  
-            tarefaAtual.popEvento();  // Por consistencia
-            switch (atual.estado) {  // TODO
-            case NaoCriada:
-                break;
-
-            case Esperando:
-                break;
-
-            case Executando:
-                break;
-
-            case Suspenso:
-                break;
-
-            case Finalizado:
-                break;
-            
-            default:
-                break;
-            }
+        if (tarefaAtual != null && ticksNoQuantum > 0) {  // Processador apenas recua seus contadores internos de controle
+            --ticksNoQuantum;
+        
+        } else if (tarefaAtual == null && tempoDesligado > 0) {
+            --tempoDesligado;
         }
     }
 }

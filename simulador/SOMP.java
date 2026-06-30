@@ -113,17 +113,26 @@ public class SOMP {
         return true; // Todas terminaram
     }
 
-    public void stepBack() {
+public void stepBack() {
         if (tempoAtual <= 0)
             return;
-        --tempoAtual;
-
-        for (Processador p : processadores) {
-            p.stepBack();
-        }
+        
+        --tempoAtual; // Volta o relógio do sistema
 
         for (Tarefa t : listaTarefasGeral) {
-            t.stepBack();
+            boolean estavaFinalizada = t.isFinalizada();
+            
+            t.stepBack(); // A tarefa restaura seu próprio tempo e desmarca o finalizada se necessário
+            
+            if (estavaFinalizada && !t.isFinalizada() && !escalonador.tarefas.contains(t))  // Se a tarefa reviveu, precisa ser colocada de volta na fila
+                escalonador.adicionarTarefa(t);
+
+            if (t.getTempoChegada() == tempoAtual)  // Se, ao voltar no tempo, a tarefa ainda não chegou ao sistema, ela é removida da lista de prontos
+                escalonador.tarefas.remove(t);
+        }
+
+        for (Processador p : processadores) {  // Retrocede o estado interno das CPUs
+            p.stepBack();
         }
     }
 }
