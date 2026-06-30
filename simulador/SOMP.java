@@ -57,7 +57,6 @@ public class SOMP {
             }
         }
 
-        // Organiza a fila
         escalonador.prepararFila(processadores, quantum);  
 
         // Pega as tarefas da fila pela função obterproximatarefa
@@ -66,6 +65,9 @@ public class SOMP {
             Tarefa proxima = escalonador.obterProximaTarefa();
             if (proxima != null) {
                 topTarefas.add(proxima);
+                if(escalonador instanceof EscalonadorPRIOPENV) {
+                    proxima.resetarEnvelhecimento();
+                }
             }
         }
 
@@ -166,6 +168,37 @@ public class SOMP {
             cpu.apagarRegistroOciosidade(tempoAtual); //desfaz o registro de ociosidade naquele tick
             cpu.setTarefaAtual(null);
             cpu.resetTicksNoQuantum(); 
+        }
+
+        //Reconstroi o estado exato
+        if(tempoAtual > 0)
+        {
+            int tickanterior = tempoAtual - 1;
+            // Restaura o envelhecimento das tarefas
+            for (Tarefa t : listaTarefasGeral) {
+                t.restaurarEnvelhecimento(tickanterior);
+
+                Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tickanterior);
+                if (reg.estado == Tarefa.Estado.Executando) {
+                    Processador cpu = processadores[reg.cpuId];
+                    
+                    // Devolve a tarefa pra cpu
+                    cpu.setTarefaAtual(t); 
+                    
+                    // Calcula quantos ticks seguidos essa tarefa estava rodando no passado
+                    int contagemQuantum = 0;
+                    for (int i = tickanterior; i >= 0; i--) {
+                        Tarefa.TickSnapshot retrocesso = t.getRegistroNoTempo(i);
+                        if (retrocesso.estado == Tarefa.Estado.Executando && retrocesso.cpuId == cpu.getId()) {
+                            contagemQuantum++;
+                        } else {
+                            break; // Se não estava executando quebra a contagem
+                        }
+                    }
+                    // Devolve os ticks do quantum para a preempção funcionar perfeitamente
+                    cpu.setTicksNoQuantum(contagemQuantum);
+                }
+            }
         }
     }
 }

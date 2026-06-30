@@ -9,13 +9,13 @@ public class EscalonadorPRIOP extends Escalonador {
 
         // Ordena a lista
         tarefas.sort((t1, t2) -> {
-            //Comparando prioridades
-            int comparePrioridade = Integer.compare(t2.getPrioridade(), t1.getPrioridade());
-            if (comparePrioridade != 0) {
-                return comparePrioridade;
+            //Comparando prioridadeEstaticaEstaticas
+            int compareprioridadeEstatica = Integer.compare(t2.getprioridadeEstatica(), t1.getprioridadeEstatica());
+            if (compareprioridadeEstatica != 0) {
+                return compareprioridadeEstatica;
             }
 
-            // Se houver empate na prioridade chama o desempate da classe abstrata
+            // Se houver empate na prioridadeEstatica chama o desempate da classe abstrata
             return desempate(t1, t2, cpus);
         });
     }

@@ -28,6 +28,9 @@ public class Processador {
         this.tarefaAtual = tarefaAtual;
     }
     
+    public void setTicksNoQuantum(int ticks) {
+        this.ticksNoQuantum = ticks;
+    }
     //Usado para a preempção
     public void resetTicksNoQuantum() { this.ticksNoQuantum = 0; }
 

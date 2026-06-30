@@ -131,12 +131,12 @@ public class Window extends JFrame {
         Tarefa t = tasksHistory.get(idx);  // Pega apenas pra ler dados pra interface
         JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + t.getId());
         
-        JMenuItem prioritySetter = new JMenuItem(new AbstractAction("Alterar Prioridade") {
-            public void actionPerformed(ActionEvent e) {  // Abre modal para digitar nova prioridade
+        JMenuItem prioritySetter = new JMenuItem(new AbstractAction("Alterar prioridadeEstatica") {
+            public void actionPerformed(ActionEvent e) {  // Abre modal para digitar nova prioridadeEstatica
                 String input = JOptionPane.showInputDialog(
                     Window.this, 
-                    "Nova prioridade para T" + t.getId() + ":", 
-                    "Alterar Prioridade", 
+                    "Nova prioridadeEstatica para T" + t.getId() + ":", 
+                    "Alterar prioridadeEstatica", 
                     JOptionPane.QUESTION_MESSAGE
                 );
 

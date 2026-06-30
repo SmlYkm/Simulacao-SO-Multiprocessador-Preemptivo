@@ -9,7 +9,7 @@ public class EscalonadorSRTF extends Escalonador {
 
         // Ordena a lista
         tarefas.sort((t1, t2) -> {
-            // Regra principal do srtf
+            // Compara qual tem menor tempo
             int compareTempo = Integer.compare(t1.getTempoRestante(), t2.getTempoRestante());
             if (compareTempo != 0) {
                 return compareTempo;

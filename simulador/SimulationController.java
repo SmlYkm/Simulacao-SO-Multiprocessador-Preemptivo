@@ -45,11 +45,11 @@ public class SimulationController {
         view.setCurrentTime(model.getTempoAtual());
     }
 
-    // O menu da View chama isso quando o usuário altera a prioridade
+    // O menu da View chama isso quando o usuário altera a prioridadeEstatica
     public void changeTaskPriority(int taskIndex, int newPriority) {
         Tarefa t = model.getTarefaByIdx(taskIndex);
-        t.setPrioridade(newPriority);
-        System.out.println("Prioridade da T" + t.getId() + " alterada para " + newPriority);
+        t.setprioridadeEstatica(newPriority);
+        System.out.println("prioridadeEstatica da T" + t.getId() + " alterada para " + newPriority);
     }
     
     // O menu da View chama isso quando o usuário suspende/retoma

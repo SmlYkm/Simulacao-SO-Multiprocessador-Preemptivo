@@ -6,7 +6,9 @@ import java.util.List;
 public class Tarefa {
 
     private int id;
-    private int prioridade;
+    private int prioridadeEstatica;//PRIOP
+    private int prioridadeDinamica;//PRIOPENV
+    private int tempoEsperando; //PRIOENV
     private int tempoExecucao;
     private int tempoRestante;
     private int tempoChegada;
@@ -33,21 +35,25 @@ public class Tarefa {
         public Estado estado;
         public int    cpuId;
         public boolean ocorreuSorteio;
+        public int prioridadeDinamica; //PRIOPENV
+        public int tempoEsperando; //PRIOPENV
 
-        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio) {
+        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio, int prioridadeDinamica, int tempoEsperando) {
             this.estado = estado;
             this.cpuId  = cpuId;
             this.ocorreuSorteio = ocorreuSorteio;
+            this.prioridadeDinamica = prioridadeDinamica;
+            this.tempoEsperando = tempoEsperando;
         }
     }
 
 
-    public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridade, List<Evento> lista_eventos) {
+    public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridadeEstatica, List<Evento> lista_eventos) {
         this.id = id;
         this.tempoChegada = tempoChegada;
         this.tempoExecucao = tempoExecucao;
         this.tempoRestante = tempoExecucao;
-        this.prioridade = prioridade;
+        this.prioridadeEstatica = prioridadeEstatica;
         this.finalizada = false;
         this.suspensa = false;
         this.envolvidaEmSorteio = false;
@@ -60,7 +66,8 @@ public class Tarefa {
     }
 
     public int getId() { return id; }
-    public int getPrioridade() { return prioridade; }
+    public int getprioridadeEstatica() { return prioridadeEstatica; }
+    public int getprioridadeDinamica() { return prioridadeDinamica; }
     public int getTempoExecucao() { return tempoExecucao; }
     public int getTempoRestante() { return tempoRestante; }
     public int getTempoChegada() { return tempoChegada; }
@@ -71,7 +78,7 @@ public class Tarefa {
     public String getCor() { return cor; }
     public List<Evento> getEventos() { return eventos; }
     
-    public void setPrioridade(int prioridade) { this.prioridade = prioridade; }
+    public void setprioridadeEstatica(int prioridadeEstatica) { this.prioridadeEstatica = prioridadeEstatica; }
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
     public void setValorSorteioAtual(double valorSorteioAtual) { this.valorSorteioAtual = valorSorteioAtual; }
     public void setFinalizada(boolean finalizada) { this.finalizada = finalizada; }
@@ -90,10 +97,10 @@ public class Tarefa {
         
         // Preenche buracos se o tempo der saltos, por segurança
         while (historico.size() <= tempoAtual) {
-            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false));
+            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false, this.prioridadeDinamica, this.tempoEsperando));
         }
         // Grava o estado atual e se houve sorteio
-        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio));
+        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio, this.prioridadeDinamica, this.tempoEsperando));
         
         // Reseta a flag para o próximo tick
         this.envolvidaEmSorteio = false;
@@ -102,7 +109,26 @@ public class Tarefa {
     public TickSnapshot getRegistroNoTempo(int tempo) {
         if (tempo >= 0 && tempo < historico.size())
             return historico.get(tempo);
-        return new TickSnapshot(Estado.NaoCriada, -1, false); // Retorna um estado padrão se o tempo for inválido
+        return new TickSnapshot(Estado.NaoCriada, -1, false, -1, -1); // Retorna um estado padrão se o tempo for inválido
+    }
+
+    public void envelhecer(int alpha) {
+        tempoEsperando++;
+        prioridadeDinamica = prioridadeEstatica + tempoEsperando * alpha;
+    }
+
+    public void resetarEnvelhecimento() {
+        tempoEsperando = 0;
+        prioridadeDinamica = prioridadeEstatica;
+    }
+
+    public void     restaurarEnvelhecimento(int tempo){
+        TickSnapshot oldSnapshot = getRegistroNoTempo(tempo);
+
+        if(oldSnapshot != null) {
+            this.prioridadeDinamica = oldSnapshot.prioridadeDinamica;
+            this.tempoEsperando = oldSnapshot.tempoEsperando;
+        }
     }
 
     public void executar(int quantum) {

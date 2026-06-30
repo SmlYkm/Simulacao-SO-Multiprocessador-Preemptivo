@@ -21,6 +21,11 @@ public class LeitorConfig {
                 int quantum = Integer.parseInt(config[1].trim());
                 int qtdeCpus = Integer.parseInt(config[2].trim());
 
+                int alpha = 0; // Valor padrão
+                if (algoritmo.equalsIgnoreCase("PRIOPENV")) {
+                    alpha = Integer.parseInt(config[3].trim()); // Captura o parâmetro de envelhecimento
+                }
+
                 // Caso tenha menos que dois processadores gera exceção
                 if (qtdeCpus < 2) {
                     // Avisa o usuário especificamente sobre este erro
@@ -40,10 +45,19 @@ public class LeitorConfig {
                     escalonador = new EscalonadorSRTF();
                 } else if (algoritmo.equalsIgnoreCase("PRIOP")) {
                     escalonador = new EscalonadorPRIOP();        
-                }
-                else
+                } else if (algoritmo.equalsIgnoreCase("PRIOPENV")) {
+                    escalonador = new EscalonadorPRIOPENV(alpha);
+                } else
                 {
                     escalonador = new EscalonadorSRTF(); // Padrão para evitar falhas
+                    JOptionPane.showMessageDialog(null, 
+                        "O arquivo de configuração solicitou um algoritmo de escalonamento inválido: " + algoritmo + "\n\n" +
+                        "A simulação será iniciada no Modo Default.", 
+                        "Algoritmo de Escalonamento Inválido", 
+                        JOptionPane.ERROR_MESSAGE);
+                    
+                    // Aborta a leitura e vai pra configuração default
+                    throw new Exception("Algoritmo de escalonamento inválido no arquivo de configuração.");
                 }
 
                 sistema = new SOMP(escalonador, qtdeCpus, quantum);
@@ -59,9 +73,9 @@ public class LeitorConfig {
                 String cor = dados[1].trim();
                 int ingresso = Integer.parseInt(dados[2].trim());
                 int duracao = Integer.parseInt(dados[3].trim());
-                int prioridade = Integer.parseInt(dados[4].trim());
+                int prioridadeEstatica = Integer.parseInt(dados[4].trim());
 
-                Tarefa novaTarefa = new Tarefa(id,cor, ingresso, duracao, prioridade, null); // Passa null para a lista de eventos por enquanto
+                Tarefa novaTarefa = new Tarefa(id,cor, ingresso, duracao, prioridadeEstatica, null); // Passa null para a lista de eventos por enquanto
 
                 // Trata lista de eventos (não está sendo usada ainda).
                 if (dados.length > 5 && !dados[5].trim().isEmpty()) {
