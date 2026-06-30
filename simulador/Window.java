@@ -413,22 +413,43 @@ public class Window extends JFrame {
     }
 
     private void gerarImagemDoGantt() {
-        int width = ganttPanel.getPreferredSize().width;
-        int height = ganttPanel.getPreferredSize().height;
+        // 1. Calcula o tamanho necessário (Garante largura mínima para caber a legenda)
+        int width = Math.max(ganttPanel.getPreferredSize().width, LABEL_WIDTH + 300);
+        int ganttHeight = ganttPanel.getPreferredSize().height;
+        int legendHeight = 60; // Espaço extra no topo da imagem para a legenda
+        int totalHeight = ganttHeight + legendHeight;
 
         Dimension tamanhoOriginal = ganttPanel.getSize(); 
-        ganttPanel.setSize(new Dimension(width, height)); 
+        ganttPanel.setSize(new Dimension(width, ganttHeight)); 
 
-        BufferedImage imagem = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB); 
+        BufferedImage imagem = new BufferedImage(width, totalHeight, BufferedImage.TYPE_INT_RGB); 
         Graphics2D g2 = imagem.createGraphics(); 
         
+        // Pinta o fundo inteiro de branco
         g2.setColor(Color.WHITE); 
-        g2.fillRect(0, 0, width, height);
-        
+        g2.fillRect(0, 0, width, totalHeight);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        ganttPanel.paint(g2); 
-        g2.dispose();
+        
+        // --- NOVIDADE: DESENHANDO A LEGENDA NA IMAGEM ---
+        PainelLegenda legenda = new PainelLegenda();
+        legenda.setSize(300, 40); 
+        
+        // Cria uma cópia da "caneta" e move ela para o topo (alinhada com o gráfico)
+        Graphics2D g2Legenda = (Graphics2D) g2.create();
+        g2Legenda.translate(LABEL_WIDTH, 15); 
+        legenda.paint(g2Legenda);
+        g2Legenda.dispose(); // Descarta essa caneta
+        // ------------------------------------------------
 
+        // --- DESENHANDO O GANTT LOGO ABAIXO ---
+        // Cria outra cópia da caneta e empurra ela para baixo, para não rabiscar em cima da legenda
+        Graphics2D g2Gantt = (Graphics2D) g2.create();
+        g2Gantt.translate(0, legendHeight); 
+        ganttPanel.paint(g2Gantt); 
+        g2Gantt.dispose();
+        // --------------------------------------
+
+        // Devolve o tamanho original pro painel voltar a caber no ScrollPane
         ganttPanel.setSize(tamanhoOriginal); 
 
         File pasta = new File("imagens"); 
