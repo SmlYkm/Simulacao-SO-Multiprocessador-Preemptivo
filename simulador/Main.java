@@ -19,7 +19,7 @@ public class Main {
         
         if (file.exists()) {
             System.out.println("Arquivo padrão encontrado. Carregando...");
-            //window.carregarSimulacaoPorCaminho(arquivoPadrao);
+            window.carregarSimulacaoPorCaminho(arquivoPadrao);
         } else {
             System.out.println("Arquivo padrão 'config.txt' não encontrado. Iniciando vazio.");
         }

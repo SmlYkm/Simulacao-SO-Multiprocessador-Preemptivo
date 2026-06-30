@@ -3,11 +3,12 @@ package simulador;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-// Interface principal do Simulador.
-public class Window extends JFrame {
+
+public class Window extends JFrame {          // Interface principal do Simulador.
     private final int ROW_HEIGHT  = 40;       // Altura de cada linha de tarefa
     private final int LABEL_WIDTH = 120;      // Largura da coluna de nomes (esquerda)
     private final int TICK_WIDTH  = 25;       // Largura de cada tick de tempo (eixo X)
@@ -24,16 +25,14 @@ public class Window extends JFrame {
         setSize(1000, 600);
         setLayout(new BorderLayout());
 
-        // Painel Superior: Opções Globais
-        JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel  controlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));  // Painel Superior: Opções Globais
 
-        // Botões de controle de tempo
-        JButton btnLoadFile  = new JButton("Carregar Arquivo");
+        JButton btnLoadFile  = new JButton("Carregar Arquivo");              // Botões de controle de tempo
         JButton btnBack      = new JButton("(<) Retroceder");
         JButton btnStep      = new JButton("Próximo Passo (>)");
         JButton btnRunAll    = new JButton("Execução Completa (>>)");
 
-        btnLoadFile.addActionListener(e -> abrirSeletorDeArquivo());
+        btnLoadFile.addActionListener(e -> abrirSeletorDeArquivo());         // Ação de carregar um novo arquivo pelo botão
 
         btnStep.addActionListener(e -> {
             if (controller != null) 
@@ -56,7 +55,7 @@ public class Window extends JFrame {
             ganttPanel.repaint();
         });
 
-        // Adicionar os botões ao painel
+        controlPanel.add(btnLoadFile);  // Adicionar os botões ao painel
         controlPanel.add(new JSeparator(SwingConstants.VERTICAL));
         controlPanel.add(btnBack);
         controlPanel.add(btnStep);
@@ -64,14 +63,12 @@ public class Window extends JFrame {
         
         add(controlPanel, BorderLayout.NORTH);
 
-        // Gráfico de Gantt
-        ganttPanel             = new GanttPanel();
+        ganttPanel             = new GanttPanel();  // Gráfico de Gantt
         JScrollPane scrollPane = new JScrollPane(ganttPanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Listener para detectar cliques no nome das tarefas (Extremidade Esquerda)
-        ganttPanel.addMouseListener(new MouseAdapter() {
+        ganttPanel.addMouseListener(new MouseAdapter() {  // Listener para detectar cliques no nome das tarefas (Extremidade Esquerda)
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getX() <= LABEL_WIDTH) {
@@ -85,25 +82,28 @@ public class Window extends JFrame {
         setLocationRelativeTo(null);
     }
 
-
     private void abrirSeletorDeArquivo() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Selecione o arquivo de configuração");
-        fileChooser.setCurrentDirectory(new java.io.File(System.getProperty("user.dir")));
+        fileChooser.setCurrentDirectory(new File(System.getProperty("user.dir")));
+        
         int userSelection = fileChooser.showOpenDialog(this);
+        
         if (userSelection == JFileChooser.APPROVE_OPTION) {
             String selectedPath = fileChooser.getSelectedFile().getAbsolutePath();
             boolean sucesso     = carregarSimulacaoPorCaminho(selectedPath);
-            if (sucesso)
+            if (sucesso) {
                 JOptionPane.showMessageDialog(
                     this, 
                     "Arquivo carregado com sucesso!", 
                     "Sucesso", 
                     JOptionPane.INFORMATION_MESSAGE
                 );
+            }
         }
     }
-    public boolean carregarSimulacaoPorCaminho(String caminhoFicheiro) {  // Método universal que carrega um arquivo e reseta a interface
+
+    public boolean carregarSimulacaoPorCaminho(String caminhoFicheiro) {  
         SOMP novoSistema = LeitorConfig.carregarSimulacao(caminhoFicheiro);
         if (novoSistema != null) {
             tasksHistory.clear();  // Limpa o estado atual da janela
@@ -125,7 +125,6 @@ public class Window extends JFrame {
         }
     }
 
-
     public void setController(SimulationController ctrl) {
         this.controller = ctrl;
     }
@@ -142,16 +141,16 @@ public class Window extends JFrame {
         JOptionPane.showMessageDialog(this, msg);
     }
 
-    // Método para injetar tarefas e atualizar a tela
-    public void addTask(Tarefa t) {
+    
+    public void addTask(Tarefa t) {  // Método para injetar tarefas e atualizar a tela
         tasksHistory.add(t);
         ganttPanel.revalidate(); 
         ganttPanel.repaint();
     }
 
-    // Abre menu para modificar atributos
-    private void openTaskOptions(int idx) {
-        Tarefa t = tasksHistory.get(idx); // Pega apenas pra ler dados pra interface
+
+    private void openTaskOptions(int idx) {  // Abre menu para modificar atributos
+        Tarefa t = tasksHistory.get(idx);    // Pega apenas pra ler dados pra interface
         JPopupMenu menu = new JPopupMenu("Atributos da Tarefa T" + t.getId());
         
         JMenuItem prioritySetter = new JMenuItem(new AbstractAction("Alterar Prioridade") {
@@ -166,8 +165,8 @@ public class Window extends JFrame {
                 if (input != null && !input.trim().isEmpty()) {
                     try {
                         int priority = Integer.parseInt(input.trim());
-                        // Chama o controller para alterar no Model!
-                        if (controller != null) controller.changeTaskPriority(idx, priority);
+                        if (controller != null)  // Chama o controller para alterar no Model
+                            controller.changeTaskPriority(idx, priority);
                         ganttPanel.repaint(); 
                     } catch (NumberFormatException ex) {
                         showError("Valor inválido! Use apenas números.");
@@ -179,14 +178,19 @@ public class Window extends JFrame {
         String suspLabel = t.isSuspensa() ? "Retomar Tarefa" : "Suspender Tarefa";
         JMenuItem suspendTaskSetter = new JMenuItem(new AbstractAction(suspLabel) {
             public void actionPerformed(ActionEvent e) {
-                if (controller != null) controller.toggleTaskSuspension(idx);
+                if (controller != null) 
+                    controller.toggleTaskSuspension(idx);
                 ganttPanel.repaint(); 
             }
         });
 
         menu.add(prioritySetter);
         menu.add(suspendTaskSetter);
-        menu.show(ganttPanel, 10, ((controller.getTotalNumTarefas() - idx - 1) * ROW_HEIGHT) + 50);
+        menu.show(
+            ganttPanel, 
+            10, 
+            ((controller.getTotalNumTarefas() - idx - 1) * ROW_HEIGHT) + 50
+        );
     }
 
     public void incrementTime() {
@@ -195,17 +199,16 @@ public class Window extends JFrame {
         ganttPanel.repaint();
     }
 
-    // Painel de renderização do Gantt.
-    private class GanttPanel extends JPanel {
+
+    private class GanttPanel extends JPanel {  // Painel de renderização do Gantt.
         public GanttPanel() {
             setBackground(Color.WHITE);
         }
 
         @Override
         public Dimension getPreferredSize() {
-            // O gráfico cresce para a direita conforme o tempo passa
-            int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100;
-            int height = (tasksHistory.size() * ROW_HEIGHT) + 100;
+            int width  = LABEL_WIDTH + (currentTime * TICK_WIDTH) + 100;  // O gráfico cresce para a direita conforme o tempo passa
+            int height = (tasksHistory.size() * ROW_HEIGHT)       + 100;
             return new Dimension(
                 Math.max(width, getParent().getWidth()), 
                 height
@@ -218,8 +221,7 @@ public class Window extends JFrame {
             Graphics2D g2 = (Graphics2D) g;
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Desenhar Linhas de grade e header de tempo
-            g2.setColor(new Color(230, 230, 230));
+            g2.setColor(new Color(230, 230, 230));  // Desenhar Linhas de grade e header de tempo
             for (int t = 0; t <= currentTime; ++t) {
                 int x = LABEL_WIDTH + (t * TICK_WIDTH);
                 
@@ -230,14 +232,9 @@ public class Window extends JFrame {
                     g2.drawString(String.valueOf(t), x - 5, 20);
                 
                 g2.setColor(new Color(230, 230, 230));
-                g2.setColor(Color.BLACK);
-                g2.setFont(new Font("Arial", Font.BOLD, 12));
-                int rodapeY = 30 + (tasksHistory.size() * ROW_HEIGHT) + 30;
-                g2.drawString("Tempo Ocioso das CPUs:", 15, rodapeY);
             }
 
-            // Coluna Esquerda = nome das tarefas e fundo
-            g2.setColor(new Color(245, 245, 245));
+            g2.setColor(new Color(245, 245, 245));  // Coluna Esquerda = nome das tarefas e fundo
             g2.fillRect(0, 0, LABEL_WIDTH, getHeight());
             g2.setColor(Color.BLACK);
             g2.drawLine(LABEL_WIDTH, 0, LABEL_WIDTH, getHeight());
@@ -283,9 +280,6 @@ public class Window extends JFrame {
 
                     // Verifica se ocorreu sorteio
                     if (reg.ocorreuSorteio) {
-                        // Debug no terminal para termos certeza que a UI sabe do sorteio
-                        System.out.println("UI: Desenhando Sorteio na T" + t.getId() + " no tick " + tick); 
-                        
                         // Desenha um círculo Vermelho
                         g2.setColor(Color.RED);
                         g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
@@ -295,12 +289,16 @@ public class Window extends JFrame {
                         g2.setFont(new Font("Arial", Font.BOLD, 9));
                         g2.drawString("S", x + TICK_WIDTH - 9, y + 11);
                     }
-                    
-                    // Se o estado for NaoCriada ou Finalizado, a tela não desenha nada
                 }
             }
-        }
 
+            // Rodapé
+            g2.setColor(Color.BLACK);
+            g2.setFont(new Font("Arial", Font.BOLD, 12));
+            int rodapeY = 30 + (tasksHistory.size() * ROW_HEIGHT) + 30;
+            // Somando LABEL_WIDTH para jogar o texto para a direita, saindo da coluna de nomes
+            g2.drawString("Tempo Ocioso das CPUs:", LABEL_WIDTH + 15, rodapeY);
+        }
     }
 
     public void showWindow() { 
