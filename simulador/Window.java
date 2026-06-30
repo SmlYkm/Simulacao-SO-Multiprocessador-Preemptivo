@@ -144,9 +144,8 @@ public class Window extends JFrame {
             }
             return true;
         } else {
-            showError(
-                "Falha ao carregar: " + caminhoFicheiro + "\nVerifique o formato do arquivo."
-            );
+            // O próprio LeitorConfig já disparou o Pop-up visual se não houver CPUs suficientes.
+            // Aqui apenas garantimos que a interface não quebre.
             return false;
         }
     }
@@ -318,15 +317,18 @@ public class Window extends JFrame {
                 }
             }
 
-            // Rodapé
+            // Rodapé com Proteção contra Null
             g2.setColor(Color.BLACK); 
             g2.setFont(new Font("Arial", Font.BOLD, 12));
             int rodapeY = yBottom + 50; 
             String textoRodape = "Tempo Ocioso das CPUs: ";
+            
             if (controller != null) {
                 Processador[] cpus_simulacao = controller.getProcessadores();
-                for (int p = 0; p < cpus_simulacao.length; p++) {
-                    textoRodape += "[P" + p + "]: " + cpus_simulacao[p].getTempoOciosoTotal() + " ticks     ";
+                if (cpus_simulacao != null) { 
+                    for (int p = 0; p < cpus_simulacao.length; p++) {
+                        textoRodape += "[P" + p + "]: " + cpus_simulacao[p].getTempoOciosoTotal() + " ticks     ";
+                    }
                 }
             }
             g2.drawString(textoRodape, LABEL_WIDTH + 15, rodapeY);

@@ -13,8 +13,8 @@ public class Main {
             // Ignora e usa o padrão do Java
         }
 
-        Window window        = new Window("Simulador de Escalonamento MP");
-        String arquivoPadrao = "config.txt";
+        Window window        = new Window("Simulador de Escalonamento MP");  // Inicia a janela de forma independente
+        String arquivoPadrao = "config.txt";                                        // Tenta carregar o arquivo padrão dinamicamente  
         File   file          = new File(arquivoPadrao);
         
         if (file.exists()) {
