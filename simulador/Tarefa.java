@@ -96,37 +96,37 @@ public class Tarefa {
             return false;
         
         Evento prox = eventos.get(eventoAtualIdx);
-        if (prox instanceof IO) {                               // Se for evento de IO
-            int tempoDecorrido = tempoExecucao - tempoRestante; // Quantos ticks a tarefa executou na CPU
-            
-            return (                                            // Bloqueia se atingiu o momento de fazer o IO e esse IO ainda não terminou
+        if (prox instanceof IO) {                               
+            int tempoDecorrido = tempoExecucao - tempoRestante; 
+        
+            return (
                 tempoDecorrido == prox.getTempoChegada() && 
-                !((IO)prox).isFinalizado()
+                !((IO)prox).isIrqTratada()
             ); 
         }
-
         return false;
     }
 
 
-    public void executarIO() {
+    public void executarIO(SOMP so) { 
         if (!isBloqueada()) 
             return;
         
         IO io = (IO) eventos.get(eventoAtualIdx);
-        io.execTick();
-        if (io.isFinalizado())
-            ++eventoAtualIdx; // Avança para a próxima requisição IO
+        io.execTick(this, so);   // O eventoAtualIdx não avança mais aqui. O SO quem avança ao tratar a IRQ.
+    }
+
+
+    public void avancarEventoIO() {  // Chamado pelo SO para notificar que a IRQ foi reconhecida 
+        ++eventoAtualIdx;
     }
 
 
     public void reverterTickIO() {
-        if (eventoAtualIdx < eventos.size()) {  // Primeiro, verifica se o IO atual estava em progresso e reverte
+        if (eventoAtualIdx < eventos.size()) {  
             Evento prox = eventos.get(eventoAtualIdx);
- 
             if (prox instanceof IO) {
                 IO io = (IO) prox;
- 
                 if (!io.isFinalizado() && io.getTempoExecutado() > 0) {
                     io.stepBack();
                     return;
@@ -134,17 +134,14 @@ public class Tarefa {
             }
         }
         
-        
-        if (eventoAtualIdx > 0) {                               // Se nenhum IO está em progresso no índice atual, pode significar que o IO terminou exatamente 
-            Evento anterior = eventos.get(eventoAtualIdx - 1);  // no tick sendo desfeito, é necessario voltar o índice para reviver o I/O
-            
-            if (!(anterior instanceof IO)) 
-                return;
-            
-            IO io = (IO) anterior;
-            if (io.isFinalizado()) {
-                io.stepBack();
-                --eventoAtualIdx;                               // Volta indice
+        if (eventoAtualIdx > 0) {                               
+            Evento anterior = eventos.get(eventoAtualIdx - 1);  
+            if (anterior instanceof IO) {
+                IO io = (IO) anterior;
+                if (io.isIrqTratada()) { // A reversão agora avalia o estado da IRQ
+                    io.stepBack();
+                    --eventoAtualIdx;                               
+                }
             }
         }
     }

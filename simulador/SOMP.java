@@ -23,6 +23,17 @@ public class SOMP {
         this.listaTarefasGeral = new ArrayList<>();
     }
 
+    private class TratamentoIRQ {
+        Tarefa tarefa;
+        IO io;
+        TratamentoIRQ(Tarefa t, IO i) { this.tarefa = t; this.io = i; }
+    }
+    private List<TratamentoIRQ> filaIRQ = new ArrayList<>();
+
+    public void registrarIRQ(Tarefa t, IO io) {
+        filaIRQ.add(new TratamentoIRQ(t, io)); // Hardware enfileira a IRQ
+    }
+
     // Um novo método para receber as tarefas do LeitorConfig:
     public void adicionarTarefa(Tarefa t) {
         this.listaTarefasGeral.add(t);
@@ -52,6 +63,13 @@ public class SOMP {
     }
 
     public void executar() {
+
+        for (TratamentoIRQ irq : filaIRQ) {                // Processamento de Interrupções, instante imediatamente posterior
+            irq.io.setIrqTratada(true);             // Informa ao IO que o SO capturou o sinal
+            irq.tarefa.avancarEventoIO();                  // Acorda a tarefa
+            System.out.println("Tick " + tempoAtual + ": SO processou IRQ da Tarefa T" + irq.tarefa.getId());
+        }
+        filaIRQ.clear();                                   // Limpa as IRQs tratadas
 
         for (Processador cpu : processadores) {            // Verifica quantum por causa da preempção por tempo
             Tarefa t = cpu.getTarefaAtual();
@@ -114,7 +132,7 @@ public class SOMP {
 
         for (Tarefa t : listaTarefasGeral) {
             if (t.getTempoChegada() <= tempoAtual && t.isBloqueada())
-                t.executarIO();
+                t.executarIO(this);
         }
 
         ++tempoAtual;
@@ -176,8 +194,11 @@ public class SOMP {
     }
 
     public void stepBack() {
-        if (tempoAtual <= 0) return;
-        --tempoAtual; //Volta 1 tick
+        if (tempoAtual <= 0) 
+            return;
+
+        filaIRQ.clear();                                       // Limpa interrupções que ficaram no limbo do retrocesso
+        --tempoAtual;                                          //Volta 1 tick
 
         for (Tarefa t : listaTarefasGeral) {                   // Restaura o valor das tarefas
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);

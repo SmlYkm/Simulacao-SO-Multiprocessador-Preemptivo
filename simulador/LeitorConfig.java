@@ -78,19 +78,18 @@ public class LeitorConfig {
                 Tarefa novaTarefa = new Tarefa(id,cor, ingresso, duracao, prioridadeEstatica, null); // Passa null para a lista de eventos por enquanto
 
 
-                // Trata lista de eventos de I/O
+                // Trata lista de eventos de IO
                 if (dados.length > 5 && !dados[5].trim().isEmpty()) {
                     String[] listaEventos = dados[5].split(",");
 
                     for (String strEvento : listaEventos) {
                         strEvento = strEvento.trim();
 
-                        if (strEvento.startsWith("IO")) {
-                            String[] partes = strEvento.substring(2).split(":");
-                        
-                            if (partes.length == 2) {
-                                int inicio    = Integer.parseInt(partes[0]);
-                                int duracaoIO = Integer.parseInt(partes[1]);
+                        if (strEvento.startsWith("I")) { // Captura I0, IO, etc
+                            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)[:\\-](\\d+)").matcher(strEvento);
+                            if (m.find()) {
+                                int inicio    = Integer.parseInt(m.group(1));
+                                int duracaoIO = Integer.parseInt(m.group(2));
                                 novaTarefa.adicionarEvento(new IO(inicio, duracaoIO));
                             }
                         }

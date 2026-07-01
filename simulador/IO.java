@@ -4,23 +4,25 @@ public class IO extends Evento {
     private int     tempoExecutado;
     private int     tempoExecucao;
     private boolean finalizado;
-
+    private boolean irqTratada; 
 
     public IO(int tempoChegada, int tempoExecucao) {
         super(tempoChegada);
         this.tempoExecucao  = tempoExecucao;
         this.tempoExecutado = 0;
         this.finalizado     = false;
+        this.irqTratada     = false; 
     }
 
 
-    public void execTick() {  // Executa um único tick
+    public void execTick(Tarefa tarefaDona, SOMP so) {   // Agora recebe a Tarefa dona e o SO para enviar a interrupção 
         if (tempoExecutado < tempoExecucao) {  
             ++tempoExecutado;
+        } 
         
-        } else if (!finalizado && tempoExecutado == tempoExecucao) {  // Marca como finalizado e gera interrupção
+        if (tempoExecutado == tempoExecucao && !finalizado) {  
             finalizado = true;
-            // interrupcao();
+            interrupcao(tarefaDona, so); // Gera IRQ
         } 
     }
 
@@ -35,9 +37,19 @@ public class IO extends Evento {
     }
 
 
-    // private void interrupcao() {
-    //     // 
-    // }
+    private void interrupcao(Tarefa t, SOMP so) {
+        so.registrarIRQ(t, this); // Envia o sinal elétrico (IRQ) para o SO
+    }
+
+
+    public boolean isIrqTratada() { 
+        return irqTratada; 
+    }
+    
+    
+    public void setIrqTratada(boolean irqTratada) { 
+        this.irqTratada = irqTratada; 
+    }
 
 
     public boolean isFinalizado() {
@@ -45,10 +57,14 @@ public class IO extends Evento {
     }
 
 
-    public void stepBack() {  // Volta 1 tick no tempo
+    public void stepBack() {  
         if (tempoExecutado > 0)
             --tempoExecutado;
+
         if (finalizado)
             finalizado = false;
+
+        if (irqTratada)
+            irqTratada = false;
     }
 }
