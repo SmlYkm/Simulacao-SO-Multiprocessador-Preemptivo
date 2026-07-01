@@ -1,7 +1,6 @@
 package simulador;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class SOMP {
     private Escalonador escalonador;
@@ -53,133 +52,25 @@ public class SOMP {
         return null;
     }
 
-    //Também cria se não estiver criado o mutex  
-    private Mutex getMutex(int mutexId) {
-        tabelaMutex.putIfAbsent(mutexId, new Mutex(mutexId));
-        return tabelaMutex.get(mutexId);
-    }
-
-    public boolean isTravado() {
-        for (Tarefa t : listaTarefasGeral) {
-            final boolean temp = !t.isFinalizada() && (
-                !t.isSuspensa() || t.getTempoChegada() > tempoAtual  // Se existe alguma tarefa que não está suspensa ou que ainda não chegou no sistema, a simulação pode progredir
-            );
-            
-            if (temp)
-                return false;  
-        }
-        
-        return true;  // Se o for terminar e não achar ninguém apto a rodar, o sistema está travado 
-    }
-
-    public void executar() {
-
-        for (TratamentoIRQ irq : filaIRQ) {                // Processamento de Interrupções, instante imediatamente posterior
-            irq.io.setIrqTratada(true);             // Informa ao IO que o SO capturou o sinal
-            irq.tarefa.avancarEventoIO();                  // Acorda a tarefa
-            System.out.println("Tick " + tempoAtual + ": SO processou IRQ da Tarefa T" + irq.tarefa.getId());
-        }
-        filaIRQ.clear();                                   // Limpa as IRQs tratadas
-
-        for (Processador cpu : processadores) {            // Verifica quantum por causa da preempção por tempo
-            Tarefa t = cpu.getTarefaAtual();
-            
-            if (t != null && cpu.getTicksNoQuantum() >= t.getQuantum()) {
-                if (t.isBloqueada()) {
-                    cpu.setTarefaAtual(null); // Sai para fazer I/O
-                    cpu.resetTicksNoQuantum();
-            
-                } else if (cpu.getTicksNoQuantum() >= cpu.getTarefaAtual().getQuantum()) {
-                    cpu.setTarefaAtual(null); // Expulsa da CPU pelo tempo
-                    cpu.resetTicksNoQuantum();
-                }
-            }
+    public void executar() {  // Execução de 1 tick
+        for (Tarefa tarefa : listaTarefasGeral) {      // Coloca tarefas que chegaram agora no escalonador
+            if (tarefa.getTempoChegada() == tempoAtual)
+                escalonador.adicionarTarefa(tarefa);
         }
 
-        escalonador.limparFila();                          // Reconstroi a fila
-        for (Tarefa t : listaTarefasGeral) {
-            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isBloqueada())
-                escalonador.adicionarTarefa(t);
-        }
+        // Organiza a fila
+        escalonador.prepararFila(processadores, quantum);  
 
-        escalonador.limparFila();                          // Reconstroi a fila
-        for (Tarefa t : listaTarefasGeral) {
-            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isBloqueada())
-                escalonador.adicionarTarefa(t);
-        }
-        escalonador.prepararFila(processadores);  
-        
-
-        // 3. Pega as tarefas da fila (Substituído FOR por WHILE para processar o Mutex dinamicamente)
+        // Pega as tarefas da fila pela função obterproximatarefa
         List<Tarefa> topTarefas = new ArrayList<>();
-        
-        while (topTarefas.size() < processadores.length) {
+        for (int i = 0; i < processadores.length; i++) {
             Tarefa proxima = escalonador.obterProximaTarefa();
-            if (proxima == null) {
-                break; // A fila esvaziou, não há mais tarefas prontas
-            }
-
-            // --- PROCESSAMENTO DO MUTEX PARA A TAREFA SELECIONADA ---
-            boolean foiBloqueada = false;
-            int tempoJaExecutado = proxima.getTempoExecucao() - proxima.getTempoRestante();
-            List<Evento> eventosDoTick = proxima.getEventosNoTempoRelativo(tempoJaExecutado);
-            List<Evento> eventosProcessados = new ArrayList<>();
-
-            for (Evento ev : eventosDoTick) {
-                if (ev instanceof EventoMutex) {
-                    EventoMutex evMutex = (EventoMutex) ev;
-                    Mutex m = getMutex(evMutex.getMutexId()); // Use seu método de buscar o Mutex
-                    
-                    if (evMutex.isLock()) { // ML (Lock)
-                        if (m.isLivre() || (m.getDonoAtual() != null && m.getDonoAtual().getId() == proxima.getId())) {
-                            m.setDonoAtual(proxima); // Conseguiu a trava!
-                            eventosProcessados.add(ev);
-                        } else {
-                            // Ocupado! A tarefa vai pra fila do Mutex e não assume a CPU
-                            if (!m.getFilaDeEspera().contains(proxima)) {
-                                m.getFilaDeEspera().add(proxima);
-                            }
-                            proxima.setEsperandoMutex(true);
-                            foiBloqueada = true;
-                            break; // Interrompe a leitura de eventos, ela já está bloqueada
-                        }
-                    } else { // MU (Unlock)
-                        if (m.getDonoAtual() != null && m.getDonoAtual().getId() == proxima.getId()) {
-                            m.setDonoAtual(null); // Soltou a trava!
-                            eventosProcessados.add(ev);
-                            
-                            if (!m.getFilaDeEspera().isEmpty()) {
-                                // Acorda a próxima tarefa imediatamente
-                                Tarefa liberada = m.getFilaDeEspera().poll();
-                                liberada.setEsperandoMutex(false);
-                                m.setDonoAtual(liberada); // A liberada já ganha a trava
-                                
-                                // INJEÇÃO DIRETA: devolve pro escalonador pra tentar rodar NESTE tick
-                                escalonador.adicionarTarefa(liberada);
-                                
-                                // Se o seu escalonador precisa reordenar após adição, descomente a linha abaixo:
-                                // escalonador.prepararFila(processadores); 
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Limpa os eventos executados para não repetirem no futuro
-            proxima.getEventos().removeAll(eventosProcessados);
-            // --- FIM DO PROCESSAMENTO DO MUTEX ---
-
-            // Se ela passou ilesa pelos bloqueios de Mutex, entra nas topTarefas
-            if (!foiBloqueada) {
+            if (proxima != null) {
                 topTarefas.add(proxima);
-                if(escalonador instanceof EscalonadorPRIOPENV) {
-                    proxima.resetarEnvelhecimento();
-                }
             }
-            // Se foi bloqueada, o while apenas recomeça e puxa a próxima da fila!
         }
 
-        // 4. Distribui as tarefas nos processadores mantendo a afinidade
+        // Distribui as tarefas nos processadores mantendo a afinidade com as tarefas
         for (Processador cpu : processadores) {
             Tarefa tarefaAtual = cpu.getTarefaAtual();
             if (tarefaAtual != null && topTarefas.contains(tarefaAtual)) {
@@ -188,7 +79,6 @@ public class SOMP {
                 cpu.setTarefaAtual(null); // Sai do processador
             }
         }
-
         //Atribui as tarefas restantes
         for (Processador cpu : processadores) { 
             if (cpu.idle() && !topTarefas.isEmpty()) {
@@ -196,11 +86,11 @@ public class SOMP {
             }
         }
 
-        // 6. Grava o estado e executa o tick
+        // Grava o estado e executa o tick
+        escalonador.executar(processadores, quantum);  // Escalonador executa seu algoritmo
         gravarHistorico();
-        for (Processador cpu : processadores) {
-            cpu.registrarOciosidade();
-            cpu.executar();
+        for (Processador cpu : processadores) {        // Executa 1 tick por processador
+            cpu.executar();                       
         }
 
         for (Tarefa t : listaTarefasGeral) {
@@ -236,7 +126,7 @@ public class SOMP {
                 continue;
             }
 
-            int cpuId = -1;  // Descobre se a tarefa está em algum processador
+            int cpuId = -1;  // Descobre se a tarefa está em alguma cpu
             for (Processador proc : processadores) {
                 if (
                     proc.getTarefaAtual()         != null && 
@@ -273,24 +163,20 @@ public class SOMP {
     }
 
     public void stepBack() {
-        if (tempoAtual <= 0) 
-            return;
+        if (tempoAtual <= 0) return;
+        --tempoAtual; //Volta 1 tick
 
-        filaIRQ.clear();                                       // Limpa interrupções que ficaram no limbo do retrocesso
-        --tempoAtual;                                          //Volta 1 tick
-
-        for (Tarefa t : listaTarefasGeral) {                   // Restaura o valor das tarefas
+        // Restaura o valor das tarefas
+        for (Tarefa t : listaTarefasGeral) {
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
             if (reg.estado == Tarefa.Estado.Executando) {
-                t.setTempoRestante(t.getTempoRestante() + 1);  // Devolve o tempo que tinha gasto
-                t.setFinalizada(false);            // Ressuscita a tarefa caso ela tenha morrido neste tick
-            
-            } else if (reg.estado == Tarefa.Estado.Bloqueado) { 
-                t.reverterTickIO(); 
+                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
+                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
             }
             
-            t.apagarRegistroNoTempo(tempoAtual);                // Apaga a coluna a frente
+            // Apaga a coluna a frente
+            t.apagarRegistroNoTempo(tempoAtual);
         }
 
         // Limpa os processadores
@@ -299,37 +185,6 @@ public class SOMP {
             cpu.apagarRegistroOciosidade(tempoAtual); //desfaz o registro de ociosidade naquele tick
             cpu.setTarefaAtual(null);
             cpu.resetTicksNoQuantum(); 
-        }
-
-        //Reconstroi o estado exato
-        if(tempoAtual > 0)
-        {
-            int tickanterior = tempoAtual - 1;
-            // Restaura o envelhecimento das tarefas
-            for (Tarefa t : listaTarefasGeral) {
-                t.restaurarEnvelhecimento(tickanterior);
-
-                Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tickanterior);
-                if (reg.estado == Tarefa.Estado.Executando) {
-                    Processador cpu = processadores[reg.cpuId];
-                    
-                    // Devolve a tarefa pra cpu
-                    cpu.setTarefaAtual(t); 
-                    
-                    // Calcula quantos ticks seguidos essa tarefa estava rodando no passado
-                    int contagemQuantum = 0;
-                    for (int i = tickanterior; i >= 0; i--) {
-                        Tarefa.TickSnapshot retrocesso = t.getRegistroNoTempo(i);
-                        if (retrocesso.estado == Tarefa.Estado.Executando && retrocesso.cpuId == cpu.getId()) {
-                            contagemQuantum++;
-                        } else {
-                            break; // Se não estava executando quebra a contagem
-                        }
-                    }
-                    // Devolve os ticks do quantum para a preempção funcionar perfeitamente
-                    cpu.setTicksNoQuantum(contagemQuantum);
-                }
-            }
         }
     }
 }
