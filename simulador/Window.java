@@ -295,7 +295,12 @@ public class Window extends JFrame {
                         g2.setColor(Color.BLACK);
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
-                    } else if (reg.estado == Tarefa.Estado.Esperando) { 
+                    } else if (reg.estado == Tarefa.Estado.EsperandoMutex) { 
+                        // Cor laranja/avermelhada quadriculada para espera de Mutex
+                        desenharPreenchimentoQuadriculado(g2, x, y + 5, TICK_WIDTH, 30, new Color(255, 165, 0));
+                        g2.setColor(new Color(255, 140, 0)); 
+                        g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
+                    }else if (reg.estado == Tarefa.Estado.Esperando) { 
                         desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(180, 180, 180));
                         g2.setColor(new Color(200, 200, 200)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
@@ -305,6 +310,7 @@ public class Window extends JFrame {
                         g2.setColor(new Color(220, 220, 220)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
                     }
+                    
 
                     if (reg.ocorreuSorteio) { 
                         g2.setColor(Color.RED);
@@ -345,6 +351,18 @@ public class Window extends JFrame {
             g2.setColor(cor);
             for (int i = 2; i < width; i += 4) {
                 g2.drawLine(x + i, y, x + i, y + height);
+            }
+        }
+        
+        private void desenharPreenchimentoQuadriculado(Graphics2D g2, int x, int y, int width, int height, Color cor) {
+            g2.setColor(cor);
+            // Linhas Verticais
+            for (int i = 2; i < width; i += 4) {
+                g2.drawLine(x + i, y, x + i, y + height);
+            }
+            // Linhas Horizontais
+            for (int i = 2; i < height; i += 4) {
+                g2.drawLine(x, y + i, x + width, y + i);
             }
         }
     }

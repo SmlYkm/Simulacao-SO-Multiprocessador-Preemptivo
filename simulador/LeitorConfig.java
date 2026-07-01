@@ -78,13 +78,42 @@ public class LeitorConfig {
                 Tarefa novaTarefa = new Tarefa(id,cor, ingresso, duracao, prioridadeEstatica, null); // Passa null para a lista de eventos por enquanto
 
                 // Trata lista de eventos (não está sendo usada ainda).
+                // Trata a lista de eventos separada por vírgulas
                 if (dados.length > 5 && !dados[5].trim().isEmpty()) {
                     String[] listaEventos = dados[5].split(",");
+                    
                     for (String strEvento : listaEventos) {
-                        strEvento = strEvento.trim();
-                        // Aqui vai instanciar os eventos
-                        // Exemplo se for um evento de E/S
-                        // novaTarefa.adicionarEvento(new EventoES(...));
+                        strEvento = strEvento.trim(); // Remove espaços em branco
+                        
+                        try {
+                            if (strEvento.contains(":")) {
+                                String[] partes = strEvento.split(":");
+                                String comando = partes[0].trim(); // Pega a parte antes dos ":" (Ex: "ML01" ou "I0")
+                                String valores = partes[1].trim(); // Pega a parte depois dos ":" (Ex: "05" ou "05-10")
+
+                                // 1. Processa Eventos de MUTEX (MLxx: 00 ou MUxx: 00)
+                                if (comando.startsWith("ML") || comando.startsWith("MU")) {
+                                    int instanteRelativo = Integer.parseInt(valores); 
+                                    boolean isLock = comando.startsWith("ML"); 
+                                    int mutexId = Integer.parseInt(comando.substring(2).trim());
+                                    
+                                    novaTarefa.adicionarEvento(new EventoMutex(instanteRelativo, mutexId, isLock));
+                                } 
+                                // 2. Processa Eventos de E/S (I0:xx-yy)
+                                else if (comando.startsWith("I")) {
+                                    // A variável 'valores' agora tem algo como "05-10"
+                                    //String[] tempos = valores.split("-");
+                                    
+                                    //int instanteRelativo = Integer.parseInt(tempos[0].trim()); // O 'xx'
+                                    //int duracao = Integer.parseInt(tempos[1].trim());          // O 'yy'
+                                    
+                                    //novaTarefa.adicionarEvento(new EventoES(instanteRelativo, duracao));
+                                }
+                            }
+                        } catch (Exception ex) {
+                            System.err.println("Erro ao fazer o parsing do evento [" + strEvento + "] na Tarefa " + id);
+                            // Pode optar por lançar uma exceção ou ignorar o evento mal formatado
+                        }
                     }
                 }
 

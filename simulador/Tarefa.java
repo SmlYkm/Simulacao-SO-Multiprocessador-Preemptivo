@@ -16,6 +16,7 @@ public class Tarefa {
     private boolean finalizada;
     private boolean suspensa;
     private boolean envolvidaEmSorteio;
+    private boolean esperandoMutex;
     private String cor;
     private static int quantum;
 
@@ -27,7 +28,8 @@ public class Tarefa {
         NaoCriada,  // SO ainda não recebeu a tarefa
         Esperando,  // SO recebeu tarefa e esta esperando para ser executada
         Executando, 
-        Suspenso,   
+        Suspenso,
+        EsperandoMutex,
         Finalizado    
     }
 
@@ -39,13 +41,15 @@ public class Tarefa {
         public boolean ocorreuSorteio;
         public int prioridadeDinamica; //PRIOPENV
         public int tempoEsperando; //PRIOPENV
+        public int ticksNoQuantum; //PRIOPENV
 
-        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio, int prioridadeDinamica, int tempoEsperando) {
+        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio, int prioridadeDinamica, int tempoEsperando, int ticksNoQuantum) {
             this.estado = estado;
             this.cpuId  = cpuId;
             this.ocorreuSorteio = ocorreuSorteio;
             this.prioridadeDinamica = prioridadeDinamica;
             this.tempoEsperando = tempoEsperando;
+            this.ticksNoQuantum = ticksNoQuantum;
         }
     }
 
@@ -59,6 +63,7 @@ public class Tarefa {
         this.finalizada = false;
         this.suspensa = false;
         this.envolvidaEmSorteio = false;
+        this.esperandoMutex = false;
         this.cor =  "#" + cor;
         this.eventos = new ArrayList<>();
         if (lista_eventos != null) {
@@ -78,8 +83,24 @@ public class Tarefa {
     public boolean isFinalizada() { return finalizada; }
     public boolean isSuspensa() { return suspensa; }
     public boolean isEnvolvidaEmSorteio() { return envolvidaEmSorteio; }
+    public boolean isEsperandoMutex() { return esperandoMutex; }
     public String getCor() { return cor; }
     public List<Evento> getEventos() { return eventos; }
+    public List<Evento> getEventosNoTempoRelativo(int tempoRelativo) {
+        List<Evento> eventosDoTick = new ArrayList<>();
+        
+        // Substitua 'this.eventos' pelo nome exato da variável da sua lista de eventos, 
+        // caso você a tenha nomeado de forma diferente (ex: listaEventos)
+        if (this.eventos != null) {
+            for (Evento ev : this.eventos) {
+                if (ev.getTempoChegada() == tempoRelativo) {
+                    eventosDoTick.add(ev);
+                }
+            }
+        }
+        
+        return eventosDoTick;
+    }
     
     public void setprioridadeEstatica(int prioridadeEstatica) { this.prioridadeEstatica = prioridadeEstatica; }
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
@@ -88,12 +109,13 @@ public class Tarefa {
     public static void setQuantum(int quantum) { Tarefa.quantum = quantum; }
     public void suspender(boolean suspensa) { this.suspensa = suspensa; }
     public void setEnvolvidaEmSorteio(boolean envolvidaEmSorteio) { this.envolvidaEmSorteio = envolvidaEmSorteio; }
+    public void setEsperandoMutex(boolean esperandoMutex) { this.esperandoMutex = esperandoMutex; }
     public void setCor(String cor) { this.cor = cor; }
     public void adicionarEvento(Evento evento) { this.eventos.add(evento); }
     public void apagarRegistroNoTempo(int tempo) { if(tempo >= 0 && tempo < historico.size()) historico.remove(tempo); }
 
     // Método para gravar o que aconteceu neste tick
-    public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
+    public void registrarEstado(int tempoAtual, Estado estado, int cpuId, int ticksNoQuantum) {
 
         if (this.envolvidaEmSorteio) {
             System.out.println("Salvando histórico: A T" + this.id + " TEM sorteio no tick " + tempoAtual);
@@ -101,10 +123,10 @@ public class Tarefa {
         
         // Preenche buracos se o tempo der saltos, por segurança
         while (historico.size() <= tempoAtual) {
-            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false, this.prioridadeDinamica, this.tempoEsperando));
+            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false, this.prioridadeDinamica, this.tempoEsperando, ticksNoQuantum));
         }
         // Grava o estado atual e se houve sorteio
-        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio, this.prioridadeDinamica, this.tempoEsperando));
+        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio, this.prioridadeDinamica, this.tempoEsperando, ticksNoQuantum));
         
         // Reseta a flag para o próximo tick
         this.envolvidaEmSorteio = false;
@@ -113,7 +135,7 @@ public class Tarefa {
     public TickSnapshot getRegistroNoTempo(int tempo) {
         if (tempo >= 0 && tempo < historico.size())
             return historico.get(tempo);
-        return new TickSnapshot(Estado.NaoCriada, -1, false, -1, -1); // Retorna um estado padrão se o tempo for inválido
+        return new TickSnapshot(Estado.NaoCriada, -1, false, -1, -1, -1); // Retorna um estado padrão se o tempo for inválido
     }
 
     public void envelhecer(int alpha) {
