@@ -23,6 +23,7 @@ public class Tarefa {
     
     private List<Evento>       eventos;
     private List<TickSnapshot> historico;
+    private int                eventoAtualIdx;
 
     public enum Estado {
         NaoCriada,  // SO ainda não recebeu a tarefa
@@ -30,7 +31,8 @@ public class Tarefa {
         Executando, 
         Suspenso,
         EsperandoMutex,
-        Finalizado    
+        Finalizado,
+        Bloqueado  // Tarefa na fila de dispositivos IO 
     }
 
     // Storage class para agregar estado e cpu de execução em dado tempo
@@ -43,18 +45,22 @@ public class Tarefa {
         public int tempoEsperando; //PRIOPENV
         public int ticksNoQuantum; //PRIOPENV
 
-        public TickSnapshot(Estado estado, int cpuId, boolean ocorreuSorteio, int prioridadeDinamica, int tempoEsperando, int ticksNoQuantum) {
+        public TickSnapshot(
+            Estado  estado, 
+            int     cpuId, 
+            boolean ocorreuSorteio, 
+            int     prioridadeDinamica, 
+            int     tempoEsperando, 
+            int     ticksNoQuantum
+        ) {
             this.estado = estado;
             this.cpuId  = cpuId;
             this.ocorreuSorteio = ocorreuSorteio;
-            this.prioridadeDinamica = prioridadeDinamica;
-            this.tempoEsperando = tempoEsperando;
-            this.ticksNoQuantum = ticksNoQuantum;
         }
     }
 
 
-    public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridadeEstatica, List<Evento> lista_eventos) {
+    public Tarefa(int id, String cor, int tempoChegada, int tempoExecucao, int prioridade, List<Evento> lista_eventos) {
         this.id = id;
         this.tempoChegada = tempoChegada;
         this.tempoExecucao = tempoExecucao;
@@ -102,7 +108,7 @@ public class Tarefa {
         return eventosDoTick;
     }
     
-    public void setprioridadeEstatica(int prioridadeEstatica) { this.prioridadeEstatica = prioridadeEstatica; }
+    public void setPrioridade(int prioridade) { this.prioridade = prioridade; }
     public void setTempoRestante(int tempoRestante) { this.tempoRestante = tempoRestante; }
     public void setValorSorteioAtual(double valorSorteioAtual) { this.valorSorteioAtual = valorSorteioAtual; }
     public void setFinalizada(boolean finalizada) { this.finalizada = finalizada; }
@@ -115,7 +121,7 @@ public class Tarefa {
     public void apagarRegistroNoTempo(int tempo) { if(tempo >= 0 && tempo < historico.size()) historico.remove(tempo); }
 
     // Método para gravar o que aconteceu neste tick
-    public void registrarEstado(int tempoAtual, Estado estado, int cpuId, int ticksNoQuantum) {
+    public void registrarEstado(int tempoAtual, Estado estado, int cpuId) {
 
         if (this.envolvidaEmSorteio) {
             System.out.println("Salvando histórico: A T" + this.id + " TEM sorteio no tick " + tempoAtual);
@@ -123,10 +129,10 @@ public class Tarefa {
         
         // Preenche buracos se o tempo der saltos, por segurança
         while (historico.size() <= tempoAtual) {
-            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false, this.prioridadeDinamica, this.tempoEsperando, ticksNoQuantum));
+            historico.add(new TickSnapshot(Estado.NaoCriada, -1, false));
         }
         // Grava o estado atual e se houve sorteio
-        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio, this.prioridadeDinamica, this.tempoEsperando, ticksNoQuantum));
+        historico.set(tempoAtual, new TickSnapshot(estado, cpuId, this.envolvidaEmSorteio));
         
         // Reseta a flag para o próximo tick
         this.envolvidaEmSorteio = false;
@@ -135,26 +141,7 @@ public class Tarefa {
     public TickSnapshot getRegistroNoTempo(int tempo) {
         if (tempo >= 0 && tempo < historico.size())
             return historico.get(tempo);
-        return new TickSnapshot(Estado.NaoCriada, -1, false, -1, -1, -1); // Retorna um estado padrão se o tempo for inválido
-    }
-
-    public void envelhecer(int alpha) {
-        tempoEsperando++;
-        prioridadeDinamica = prioridadeEstatica + tempoEsperando * alpha;
-    }
-
-    public void resetarEnvelhecimento() {
-        tempoEsperando = 0;
-        prioridadeDinamica = prioridadeEstatica;
-    }
-
-    public void     restaurarEnvelhecimento(int tempo){
-        TickSnapshot oldSnapshot = getRegistroNoTempo(tempo);
-
-        if(oldSnapshot != null) {
-            this.prioridadeDinamica = oldSnapshot.prioridadeDinamica;
-            this.tempoEsperando = oldSnapshot.tempoEsperando;
-        }
+        return new TickSnapshot(Estado.NaoCriada, -1, false); // Retorna um estado padrão se o tempo for inválido
     }
 
     public void executar(int tempo) {
@@ -181,4 +168,22 @@ public class Tarefa {
         return historico.remove(idx);
     }
 
+    public TickSnapshot peekHistorico() {
+        if (historico.isEmpty())
+            return null;
+        int idx = historico.size() - 1;
+        return historico.get(idx);
+    }
+
+    public void stepBack() {
+        TickSnapshot desfeito = popHistorico(); // Tira o registro do estado futuro que estamos desfazendo
+        
+        if (desfeito != null) {
+            if (desfeito.estado == Estado.Executando)
+                ++tempoRestante; // Se ela rodou nesse tick, devolvemos o tempo de execução
+            
+            if (tempoRestante > 0)  // Se recuperou o tempoRestante, garantimos que ela reviveu (não está mais finalizada)
+                finalizada = false;
+        }
+    }
 }

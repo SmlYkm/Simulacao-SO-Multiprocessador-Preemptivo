@@ -22,10 +22,26 @@ public class SOMP {
         this.listaTarefasGeral = new ArrayList<>();
     }
 
+    private class TratamentoIRQ {
+        Tarefa tarefa;
+        IO io;
+        TratamentoIRQ(Tarefa t, IO i) { this.tarefa = t; this.io = i; }
+    }
+    private List<TratamentoIRQ> filaIRQ = new ArrayList<>();
+
+    public void registrarIRQ(Tarefa t, IO io) {
+        filaIRQ.add(new TratamentoIRQ(t, io)); // Hardware enfileira a IRQ
+    }
+
     // Um novo método para receber as tarefas do LeitorConfig:
     public void adicionarTarefa(Tarefa t) {
         this.listaTarefasGeral.add(t);
     }
+
+    // Método para o Main poder puxar a lista de tarefas e enviar para a Window:
+    // public List<Tarefa> getListaTarefasGeral() {
+    //     return listaTarefasGeral;
+    // }
 
     public int getTotalNumTarefas() {
         return listaTarefasGeral.size();
@@ -56,27 +72,43 @@ public class SOMP {
         return true;  // Se o for terminar e não achar ninguém apto a rodar, o sistema está travado 
     }
 
-    public void executar() {  
-        
-        // 1. Reconstroi a fila (Apenas tarefas válidas, o que elimina o bug do tempo 00 fantasma)
-        escalonador.limparFila();
-        for (Tarefa t : listaTarefasGeral) {
-            // Se a tarefa já chegou, ainda não acabou e não está suspensa/bloqueada, entra na fila
-            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isEsperandoMutex()) {
-                escalonador.adicionarTarefa(t);
-            }
+    public void executar() {
+
+        for (TratamentoIRQ irq : filaIRQ) {                // Processamento de Interrupções, instante imediatamente posterior
+            irq.io.setIrqTratada(true);             // Informa ao IO que o SO capturou o sinal
+            irq.tarefa.avancarEventoIO();                  // Acorda a tarefa
+            System.out.println("Tick " + tempoAtual + ": SO processou IRQ da Tarefa T" + irq.tarefa.getId());
         }
-        
-        // 2. Verifica quantum por causa da preempção por tempo
-        for (Processador cpu : processadores) {
+        filaIRQ.clear();                                   // Limpa as IRQs tratadas
+
+        for (Processador cpu : processadores) {            // Verifica quantum por causa da preempção por tempo
             Tarefa t = cpu.getTarefaAtual();
+            
             if (t != null && cpu.getTicksNoQuantum() >= t.getQuantum()) {
-                cpu.setTarefaAtual(null); // Expulsa da CPU
-                cpu.resetTicksNoQuantum();
+                if (t.isBloqueada()) {
+                    cpu.setTarefaAtual(null); // Sai para fazer I/O
+                    cpu.resetTicksNoQuantum();
+            
+                } else if (cpu.getTicksNoQuantum() >= cpu.getTarefaAtual().getQuantum()) {
+                    cpu.setTarefaAtual(null); // Expulsa da CPU pelo tempo
+                    cpu.resetTicksNoQuantum();
+                }
             }
         }
 
+        escalonador.limparFila();                          // Reconstroi a fila
+        for (Tarefa t : listaTarefasGeral) {
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isBloqueada())
+                escalonador.adicionarTarefa(t);
+        }
+
+        escalonador.limparFila();                          // Reconstroi a fila
+        for (Tarefa t : listaTarefasGeral) {
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isBloqueada())
+                escalonador.adicionarTarefa(t);
+        }
         escalonador.prepararFila(processadores);  
+        
 
         // 3. Pega as tarefas da fila (Substituído FOR por WHILE para processar o Mutex dinamicamente)
         List<Tarefa> topTarefas = new ArrayList<>();
@@ -156,8 +188,8 @@ public class SOMP {
                 cpu.setTarefaAtual(null); // Sai do processador
             }
         }
-        
-        // 5. Atribui as tarefas restantes aos processadores livres
+
+        //Atribui as tarefas restantes
         for (Processador cpu : processadores) { 
             if (cpu.idle() && !topTarefas.isEmpty()) {
                 cpu.setTarefaAtual(topTarefas.remove(0));  
@@ -170,6 +202,12 @@ public class SOMP {
             cpu.registrarOciosidade();
             cpu.executar();
         }
+
+        for (Tarefa t : listaTarefasGeral) {
+            if (t.getTempoChegada() <= tempoAtual && t.isBloqueada())
+                t.executarIO(this);
+        }
+
         ++tempoAtual;
     }
 
@@ -180,12 +218,21 @@ public class SOMP {
                 continue;
             } else if (tarefa.isEsperandoMutex()) {              
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.EsperandoMutex, -1, 0);
+            }
+            if (tarefa.getTempoChegada() > tempoAtual) {  
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.NaoCriada, -1, 0);
                 continue;
-            } else if (tarefa.isSuspensa()) {                    // Suspenso
+            
+            } else if (tarefa.isFinalizada()) {                          
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1, 0);
+                continue;
+            
+            } else if (tarefa.isSuspensa()) {                    
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1, 0);
                 continue;
-            } else if (tarefa.getTempoChegada() > tempoAtual) {  // Tarefa ainda não foi criada
-                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1, 0);
+            
+            } else if (tarefa.isBloqueada()) {                   
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Bloqueado, -1, 0);
                 continue;
             }
 
@@ -214,8 +261,9 @@ public class SOMP {
     
     public boolean isFinalizado() {  // Verifica se todas as tarefas já terminaram
         for (Tarefa t : listaTarefasGeral) {
-            if (!t.isFinalizada())
+            if (!t.isFinalizada()) {
                 return false;       // Se encontrar uma que não terminou, retorna falso
+            }
         }
         return true; // Todas terminaram
     }
@@ -225,20 +273,24 @@ public class SOMP {
     }
 
     public void stepBack() {
-        if (tempoAtual <= 0) return;
-        --tempoAtual; //Volta 1 tick
+        if (tempoAtual <= 0) 
+            return;
 
-        // Restaura o valor das tarefas
-        for (Tarefa t : listaTarefasGeral) {
+        filaIRQ.clear();                                       // Limpa interrupções que ficaram no limbo do retrocesso
+        --tempoAtual;                                          //Volta 1 tick
+
+        for (Tarefa t : listaTarefasGeral) {                   // Restaura o valor das tarefas
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
             if (reg.estado == Tarefa.Estado.Executando) {
-                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
-                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
+                t.setTempoRestante(t.getTempoRestante() + 1);  // Devolve o tempo que tinha gasto
+                t.setFinalizada(false);            // Ressuscita a tarefa caso ela tenha morrido neste tick
+            
+            } else if (reg.estado == Tarefa.Estado.Bloqueado) { 
+                t.reverterTickIO(); 
             }
             
-            // Apaga a coluna a frente
-            t.apagarRegistroNoTempo(tempoAtual);
+            t.apagarRegistroNoTempo(tempoAtual);                // Apaga a coluna a frente
         }
 
         // Limpa os processadores

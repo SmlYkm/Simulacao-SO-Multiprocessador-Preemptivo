@@ -216,12 +216,14 @@ public class Window extends JFrame {
         );
     }
 
+
     public void incrementTime() {
         ++currentTime;
         ganttPanel.revalidate();
         ganttPanel.repaint();
     }
 
+    
     private class GanttPanel extends JPanel { 
         public GanttPanel() {
             setBackground(Color.WHITE);
@@ -295,6 +297,14 @@ public class Window extends JFrame {
                         g2.setColor(Color.BLACK);
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
+                    } else if (reg.estado == Tarefa.Estado.Bloqueado) { // IO -> laranja
+                        g2.setColor(Color.ORANGE);
+                        g2.fillRect(x, y + 5, TICK_WIDTH, 30);
+                        
+                        g2.setColor(Color.WHITE); 
+                        g2.setFont(new Font("Arial", Font.BOLD, 10));
+                        g2.drawString("I/O", x + 3, y + 25);
+
                     } else if (reg.estado == Tarefa.Estado.EsperandoMutex) { 
                         // Cor laranja/avermelhada quadriculada para espera de Mutex
                         desenharPreenchimentoQuadriculado(g2, x, y + 5, TICK_WIDTH, 30, new Color(255, 165, 0));
@@ -373,7 +383,7 @@ public class Window extends JFrame {
 
     class PainelLegenda extends JPanel { 
         public PainelLegenda() {
-            setPreferredSize(new Dimension(240, 40)); 
+            setPreferredSize(new Dimension(320, 40)); 
             setOpaque(false); 
         }
 
@@ -427,6 +437,18 @@ public class Window extends JFrame {
             
             g2.setColor(Color.BLACK);
             g2.fillRect(x + 16, 18, 14, 14);
+
+            x += 65;
+
+            g2.setColor(Color.BLACK);  
+            g2.setFont(new Font("Arial", Font.PLAIN, 10));
+            g2.drawString("Bloqueada", x, 12);
+            
+            g2.setColor(Color.ORANGE);
+            g2.fillRect(x + 16, 18, 14, 14);
+            g2.setColor(Color.WHITE);
+            g2.setFont(new Font("Arial", Font.BOLD, 8));
+            g2.drawString("I/O", x + 17, 29);
         }
     }
 
