@@ -68,14 +68,10 @@ public class SOMP {
             }
         }
 
-
-        // Reconstroi a fila
-        escalonador.limparFila();
+        escalonador.limparFila();                          // Reconstroi a fila
         for (Tarefa t : listaTarefasGeral) {
-            // Se a tarefa está pronta ainda não acabou e não está suspensa entra na fila
-            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa()) {
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isBloqueada())
                 escalonador.adicionarTarefa(t);
-            }
         }
 
         escalonador.prepararFila(processadores, quantum);  
@@ -117,8 +113,8 @@ public class SOMP {
         }
 
         for (Tarefa t : listaTarefasGeral) {
-            if (t.isBloqueada())
-                t.executarIO(); // O dispositivo de I/O progride
+            if (t.getTempoChegada() <= tempoAtual && t.isBloqueada())
+                t.executarIO();
         }
 
         ++tempoAtual;
@@ -127,20 +123,20 @@ public class SOMP {
     private void gravarHistorico() {
         for (Tarefa tarefa : listaTarefasGeral) {
             
-            if (tarefa.isFinalizada()) {                         // Terminou
+            if (tarefa.getTempoChegada() > tempoAtual) {  
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.NaoCriada, -1);
+                continue;
+            
+            } else if (tarefa.isFinalizada()) {                          
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1);
                 continue;
             
-            } else if (tarefa.isSuspensa()) {                    // Suspenso
+            } else if (tarefa.isSuspensa()) {                    
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1);
                 continue;
             
-            } else if (tarefa.isBloqueada()) {                   // Fazendo IO
+            } else if (tarefa.isBloqueada()) {                   
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Bloqueado, -1);
-                continue;
-            
-            } else if (tarefa.getTempoChegada() > tempoAtual) {  // Tarefa ainda não foi criada
-                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1);
                 continue;
             }
 
