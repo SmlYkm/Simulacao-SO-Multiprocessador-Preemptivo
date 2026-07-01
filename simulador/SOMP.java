@@ -1,190 +1,297 @@
 package simulador;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class SOMP {
-    private Escalonador escalonador;
+    private Escalonador   escalonador;
     private Processador[] processadores;
-    private int tempoAtual;
-    private java.util.Map<Integer, Mutex> tabelaMutex = new java.util.HashMap<>();
+    private int           tempoAtual;
 
-    private ArrayList<Tarefa> listaTarefasGeral;
+    private java.util.Map<Integer, Mutex> tabelaMutex = new java.util.HashMap<>();
+    private ArrayList<Tarefa>             listaTarefasGeral;
+
 
     public SOMP(Escalonador escalonador, int numProcessadores) {
-        this.escalonador = escalonador;
+        this.escalonador   = escalonador;
         this.processadores = new Processador[numProcessadores];
-        for (int i = 0; i < numProcessadores; i++) {
-            this.processadores[i] = new Processador(i);
-        }
-        this.tempoAtual = 0;
 
+        for (int i = 0; i < numProcessadores; i++)
+            this.processadores[i] = new Processador(i);
+
+        this.tempoAtual = 0;
         this.listaTarefasGeral = new ArrayList<>();
     }
+
 
     private class TratamentoIRQ {
         Tarefa tarefa;
         IO io;
         TratamentoIRQ(Tarefa t, IO i) { this.tarefa = t; this.io = i; }
     }
+    
     private List<TratamentoIRQ> filaIRQ = new ArrayList<>();
 
+
     public void registrarIRQ(Tarefa t, IO io) {
-        filaIRQ.add(new TratamentoIRQ(t, io)); // Hardware enfileira a IRQ
+        filaIRQ.add(new TratamentoIRQ(t, io)); 
     }
 
-    // Um novo método para receber as tarefas do LeitorConfig:
+
     public void adicionarTarefa(Tarefa t) {
         this.listaTarefasGeral.add(t);
     }
 
-    // Método para o Main poder puxar a lista de tarefas e enviar para a Window:
-    // public List<Tarefa> getListaTarefasGeral() {
-    //     return listaTarefasGeral;
-    // }
 
     public int getTotalNumTarefas() {
         return listaTarefasGeral.size();
     }
 
+
     public Tarefa getTarefaByIdx(int idx) {
-        if (listaTarefasGeral != null)  // && id >= 0 && id < listaTarefasGeral.size())
-            return listaTarefasGeral.get(idx);  // get ja tem checagem de idx
+        if (listaTarefasGeral != null) return listaTarefasGeral.get(idx); 
         return null;
     }
 
-    public void executar() {  // Execução de 1 tick
-        for (Tarefa tarefa : listaTarefasGeral) {      // Coloca tarefas que chegaram agora no escalonador
-            if (tarefa.getTempoChegada() == tempoAtual)
-                escalonador.adicionarTarefa(tarefa);
+
+    private Mutex getMutex(int mutexId) {
+        tabelaMutex.putIfAbsent(mutexId, new Mutex(mutexId));
+        return tabelaMutex.get(mutexId);
+    }
+
+
+    public boolean isTravado() {
+        for (Tarefa t : listaTarefasGeral) {
+            final boolean temp = !t.isFinalizada() && (
+                !t.isSuspensa() || t.getTempoChegada() > tempoAtual 
+            );
+            if (temp) return false;
         }
+        return true;
+    }
 
-        // Organiza a fila
-        escalonador.prepararFila(processadores, quantum);  
 
-        // Pega as tarefas da fila pela função obterproximatarefa
-        List<Tarefa> topTarefas = new ArrayList<>();
-        for (int i = 0; i < processadores.length; i++) {
-            Tarefa proxima = escalonador.obterProximaTarefa();
-            if (proxima != null) {
-                topTarefas.add(proxima);
+    public void executar() {  
+        for (TratamentoIRQ irq : filaIRQ) {   // Trata interrupções de IO                
+            irq.io.setIrqTratada(true);             
+            System.out.println("Tick " + tempoAtual + ": SO processou IRQ da Tarefa T" + irq.tarefa.getId());
+        }
+        filaIRQ.clear();                                   
+
+        escalonador.limparFila();             // Reconstruir a fila
+        for (Tarefa t : listaTarefasGeral) {  // Só entra na CPU se não está finalizada, suspensa, esperando Mutex OU bloqueada por IO
+            if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isEsperandoMutex() && !t.isBloqueada())
+                escalonador.adicionarTarefa(t);
+        }
+        
+        for (Processador cpu : processadores) {// Preempção por tempo
+            Tarefa t = cpu.getTarefaAtual();
+            
+            if (t != null && t.isBloqueada()) {// A tarefa só sofre preempção do Quantum se não acabou de ir para IO ou fila de Mutex
+                cpu.setTarefaAtual(null); 
+                cpu.resetTicksNoQuantum();
+
+            } else if (t != null && cpu.getTicksNoQuantum() >= t.getQuantum()) {
+                cpu.setTarefaAtual(null); 
+                cpu.resetTicksNoQuantum();
             }
         }
 
-        // Distribui as tarefas nos processadores mantendo a afinidade com as tarefas
-        for (Processador cpu : processadores) {
+        escalonador.prepararFila(processadores);  
+
+        List<Tarefa> topTarefas = new ArrayList<>();  // Processamento Dinâmico, Lógica Mutex Unificada
+        
+        while (topTarefas.size() < processadores.length) {
+            Tarefa proxima = escalonador.obterProximaTarefa();
+            if (proxima == null)
+                break; 
+
+            boolean foiBloqueada       = false;
+            int     tempoJaExecutado   = proxima.getTempoExecucao() - proxima.getTempoRestante();
+            List<Evento> eventosDoTick = proxima.getEventosNoTempoRelativo(tempoJaExecutado);
+
+            for (Evento ev : eventosDoTick) {
+                if (ev instanceof EventoMutex) {
+                    EventoMutex evMutex = (EventoMutex) ev;
+                    
+                    if (evMutex.isProcessado()) 
+                        continue; // Evita loop infinito no step-back
+                    
+                    Mutex m = getMutex(evMutex.getMutexId()); 
+                    
+                    if (evMutex.isLock()) { 
+                        if (
+                            m.isLivre() || (m.getDonoAtual() != null && 
+                            m.getDonoAtual().getId() == proxima.getId())
+                        ) {
+                            m.setDonoAtual(proxima); 
+                            evMutex.setProcessado(true);
+
+                        } else {
+                            if (!m.getFilaDeEspera().contains(proxima))
+                                m.getFilaDeEspera().add(proxima);
+
+                            proxima.setEsperandoMutex(true);
+                            foiBloqueada = true;
+                            break; 
+                        }
+                    } else { 
+                        if (
+                            m.getDonoAtual() != null && m.getDonoAtual().getId() == proxima.getId()
+                        ) {
+                            m.setDonoAtual(null); 
+                            evMutex.setProcessado(true);
+                            
+                            if (!m.getFilaDeEspera().isEmpty()) {
+                                Tarefa liberada = m.getFilaDeEspera().poll();
+                                liberada.setEsperandoMutex(false);
+                                m.setDonoAtual(liberada); 
+                                
+                                escalonador.adicionarTarefa(liberada);
+                                escalonador.prepararFila(processadores); 
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!foiBloqueada) {
+                topTarefas.add(proxima);
+                if(escalonador instanceof EscalonadorPRIOPENV)
+                    proxima.resetarEnvelhecimento();
+            }
+        }
+ 
+        for (Processador cpu : processadores) {  // Distribuição
             Tarefa tarefaAtual = cpu.getTarefaAtual();
             if (tarefaAtual != null && topTarefas.contains(tarefaAtual)) {
-                topTarefas.remove(tarefaAtual); // Continua no mesmo processador
+                topTarefas.remove(tarefaAtual); 
+
             } else {
-                cpu.setTarefaAtual(null); // Sai do processador
+                cpu.setTarefaAtual(null); 
             }
         }
-        //Atribui as tarefas restantes
-        for (Processador cpu : processadores) { 
-            if (cpu.idle() && !topTarefas.isEmpty()) {
+        
+        for (Processador cpu : processadores) {  // Preenche os vazios
+            if (cpu.idle() && !topTarefas.isEmpty())
                 cpu.setTarefaAtual(topTarefas.remove(0));  
-            }
         }
 
-        // Grava o estado e executa o tick
-        escalonador.executar(processadores, quantum);  // Escalonador executa seu algoritmo
-        gravarHistorico();
-        for (Processador cpu : processadores) {        // Executa 1 tick por processador
-            cpu.executar();                       
+        gravarHistorico();  // Grava o estado e executa o tick
+        for (Processador cpu : processadores) {
+            cpu.registrarOciosidade();
+            cpu.executar();
         }
-
-        for (Tarefa t : listaTarefasGeral) {
+        
+        for (Tarefa t : listaTarefasGeral) {  // Tick exclusivo do hardware de IO
             if (t.getTempoChegada() <= tempoAtual && t.isBloqueada())
                 t.executarIO(this);
         }
-
         ++tempoAtual;
     }
 
     private void gravarHistorico() {
         for (Tarefa tarefa : listaTarefasGeral) {
-            if (tarefa.isFinalizada()) {                         // Terminou
+            if (tarefa.isFinalizada()) {                         
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1, 0);
                 continue;
+
             } else if (tarefa.isEsperandoMutex()) {              
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.EsperandoMutex, -1, 0);
-            }
-            if (tarefa.getTempoChegada() > tempoAtual) {  
-                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.NaoCriada, -1, 0);
-                continue;
-            
-            } else if (tarefa.isFinalizada()) {                          
-                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Finalizado, -1, 0);
                 continue;
             
             } else if (tarefa.isSuspensa()) {                    
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Suspenso, -1, 0);
                 continue;
             
-            } else if (tarefa.isBloqueada()) {                   
+            } else if (tarefa.isBloqueada()) { // Adicionado o estado Bloqueado do IO
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Bloqueado, -1, 0);
+                continue;
+            
+            } else if (tarefa.getTempoChegada() > tempoAtual) {  
+                tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1, 0);
                 continue;
             }
 
-            int cpuId = -1;  // Descobre se a tarefa está em alguma cpu
+            int cpuId = -1;  
             for (Processador proc : processadores) {
-                if (
-                    proc.getTarefaAtual()         != null && 
-                    proc.getTarefaAtual().getId() == tarefa.getId()
-                ) {
+                if (proc.getTarefaAtual() != null && proc.getTarefaAtual().getId() == tarefa.getId()) {
                     cpuId = proc.getId();
                     break;
                 }
             }
 
-            if (cpuId != -1) {  // Ta rodando em algum lugar
+            if (cpuId != -1) {  
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Executando, cpuId, processadores[cpuId].getTicksNoQuantum());
-            } else {            // Não ta rodando, mas já chegou e não terminou -> está esperando
+            
+            } else {            
                 tarefa.registrarEstado(tempoAtual, Tarefa.Estado.Esperando, -1, 0);
             }
         }
     }
     
-    public int getTempoAtual() {  // Retorna o tempo real da simulação
+
+    public int getTempoAtual() { 
         return tempoAtual; 
     }
     
-    public boolean isFinalizado() {  // Verifica se todas as tarefas já terminaram
+
+    public boolean isFinalizado() {  
         for (Tarefa t : listaTarefasGeral) {
-            if (!t.isFinalizada()) {
-                return false;       // Se encontrar uma que não terminou, retorna falso
-            }
+            if (!t.isFinalizada()) return false;        
         }
-        return true; // Todas terminaram
+        return true; 
     }
 
-    public Processador[] getProcessadores() {
-        return processadores;
+
+    public Processador[] getProcessadores() { 
+        return processadores; 
     }
+
 
     public void stepBack() {
         if (tempoAtual <= 0) return;
-        --tempoAtual; //Volta 1 tick
+        --tempoAtual; 
 
-        // Restaura o valor das tarefas
         for (Tarefa t : listaTarefasGeral) {
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
             if (reg.estado == Tarefa.Estado.Executando) {
-                t.setTempoRestante(t.getTempoRestante() + 1); // Devolve o tempo que tinha gasto
-                t.setFinalizada(false); // Ressuscita a tarefa caso ela tenha morrido neste tick
+                t.setTempoRestante(t.getTempoRestante() + 1); 
+                t.setFinalizada(false); 
             }
             
-            // Apaga a coluna a frente
             t.apagarRegistroNoTempo(tempoAtual);
         }
 
-        // Limpa os processadores
-        // O método executar vai reconstruir a fila a partir da lista geral
         for (Processador cpu : processadores) {
-            cpu.apagarRegistroOciosidade(tempoAtual); //desfaz o registro de ociosidade naquele tick
+            cpu.apagarRegistroOciosidade(tempoAtual); 
             cpu.setTarefaAtual(null);
             cpu.resetTicksNoQuantum(); 
+        }
+
+        if(tempoAtual > 0) {
+            int tickanterior = tempoAtual - 1;
+            for (Tarefa t : listaTarefasGeral) {
+                t.restaurarEnvelhecimento(tickanterior);
+
+                Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tickanterior);
+                if (reg.estado == Tarefa.Estado.Executando) {
+                    Processador cpu = processadores[reg.cpuId];
+                    cpu.setTarefaAtual(t); 
+                    
+                    int contagemQuantum = 0;
+                    for (int i = tickanterior; i >= 0; i--) {
+                        Tarefa.TickSnapshot retrocesso = t.getRegistroNoTempo(i);
+                        if (retrocesso.estado == Tarefa.Estado.Executando && retrocesso.cpuId == cpu.getId()) {
+                            contagemQuantum++;
+                        } else {
+                            break; 
+                        }
+                    }
+                    cpu.setTicksNoQuantum(contagemQuantum);
+                }
+            }
         }
     }
 }
