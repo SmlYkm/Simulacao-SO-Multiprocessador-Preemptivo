@@ -32,6 +32,7 @@ public class Window extends JFrame {
         setTitle(title);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 600);
+        setMinimumSize(new Dimension(1050, 500));
         setLayout(new BorderLayout());
 
         // Painel Superior: Estrutura que segura os botões na esquerda e a legenda na direita
@@ -310,6 +311,10 @@ public class Window extends JFrame {
                         desenharPreenchimentoQuadriculado(g2, x, y + 5, TICK_WIDTH, 30, new Color(255, 165, 0));
                         g2.setColor(new Color(255, 140, 0)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
+                        g2.setColor(Color.BLACK); 
+                        g2.setFont(new Font("Arial", Font.BOLD, 9));
+                        g2.drawString("M", x + 9, y + 25);
+
 
                     }else if (reg.estado == Tarefa.Estado.Esperando) { 
                         desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(180, 180, 180));
@@ -383,7 +388,7 @@ public class Window extends JFrame {
 
     class PainelLegenda extends JPanel { 
         public PainelLegenda() {
-            setPreferredSize(new Dimension(320, 40)); 
+            setPreferredSize(new Dimension(420, 40)); // Aumentado para caber o Mutex
             setOpaque(false); 
         }
 
@@ -449,6 +454,26 @@ public class Window extends JFrame {
             g2.setColor(Color.WHITE);
             g2.setFont(new Font("Arial", Font.BOLD, 8));
             g2.drawString("I/O", x + 17, 29);
+            
+            // --- NOVO: ÍCONE DO MUTEX ---
+            x += 65;
+
+            g2.setColor(Color.BLACK);  
+            g2.setFont(new Font("Arial", Font.PLAIN, 10));
+            g2.drawString("Espera Mutex", x - 5, 12); // x-5 para centralizar o texto maior
+            
+            g2.setColor(new Color(255, 165, 0)); // Cor da grade
+            for(int i = 2; i < 14; i += 3) {
+                g2.drawLine(x + 16 + i, 18, x + 16 + i, 32); // Linhas Verticais
+                g2.drawLine(x + 16, 18 + i, x + 30, 18 + i); // Linhas Horizontais
+            }
+            
+            g2.setColor(new Color(255, 140, 0)); // Borda
+            g2.drawRect(x + 16, 18, 14, 14);
+            
+            g2.setColor(Color.BLACK); // Letra M
+            g2.setFont(new Font("Arial", Font.BOLD, 9));
+            g2.drawString("M", x + 19, 29);
         }
     }
 
@@ -472,7 +497,7 @@ public class Window extends JFrame {
         
         // --- NOVIDADE: DESENHANDO A LEGENDA NA IMAGEM ---
         PainelLegenda legenda = new PainelLegenda();
-        legenda.setSize(300, 40); 
+        legenda.setSize(420, 40); 
         
         // Cria uma cópia da "caneta" e move ela para o topo (alinhada com o gráfico)
         Graphics2D g2Legenda = (Graphics2D) g2.create();
