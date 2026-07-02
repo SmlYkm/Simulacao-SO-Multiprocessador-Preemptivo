@@ -128,7 +128,7 @@ public class SOMP {
 
         escalonador.prepararFila(processadores);  
 
-        List<Tarefa> topTarefas = new ArrayList<>();  // Processamento Dinamico
+        List<Tarefa> topTarefas = new ArrayList<>();  // Processamento Dinamico, Lógica Mutex Unificada
         
         while (topTarefas.size() < processadores.length) {
             Tarefa proxima = escalonador.obterProximaTarefa();
@@ -297,6 +297,8 @@ public class SOMP {
             if (reg.estado == Tarefa.Estado.EsperandoMutex) {
                 Tarefa.TickSnapshot regAnterior = t.getRegistroNoTempo(tempoAtual - 1);
                 
+                //só tira da fila se no tick anterior ela não estava esperando mutex,
+                // ou seja, se ela acabou de entrar na fila de espera do mutex
                 if (regAnterior == null || regAnterior.estado != Tarefa.Estado.EsperandoMutex) {
                     int tempoRelativo = t.getTempoExecucao() - t.getTempoRestante();
                     List<Evento> eventos = t.getEventosNoTempoRelativo(tempoRelativo);
@@ -333,7 +335,7 @@ public class SOMP {
                                 if (donoInvasor != null && donoInvasor.getId() != t.getId()) {
                                     donoInvasor.setEsperandoMutex(true);
                                     
-                                    // A MÁGICA AQUI 2: Devolver a tarefa para o INÍCIO da fila
+                                    // Devolve a tarefa para o INÍCIO da fila
                                     if (m.getFilaDeEspera() instanceof java.util.LinkedList) {
                                         ((java.util.LinkedList<Tarefa>) m.getFilaDeEspera()).addFirst(donoInvasor);
                                     } else if (m.getFilaDeEspera() instanceof java.util.Deque) {
