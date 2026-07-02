@@ -334,4 +334,26 @@ public class Tarefa {
             return null;
         return historico.remove(historico.size() - 1);
     }
+
+    public boolean temEventoMutexNoTick(int tempoRelativo) {
+        for (Evento ev : eventos) {
+            if (ev instanceof EventoMutex) {
+                EventoMutex em = (EventoMutex) ev;
+                if (ev.getTempoChegada() == tempoRelativo && !em.isProcessado())
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    public EventoMutex getEventoMutexNoTick(int tempoRelativo) {
+        for (Evento ev : eventos) {
+            if (ev instanceof EventoMutex) {
+                EventoMutex em = (EventoMutex) ev;
+                if (ev.getTempoChegada() == tempoRelativo && !em.isProcessado())
+                    return em;
+            }
+        }
+        return null;
+    }
 }

@@ -73,35 +73,35 @@ public class LeitorConfig {
                     id, cor, ingresso, duracao, prioridadeEstatica, null
                 ); 
 
-                if (dados.length > 5 && !dados[5].trim().isEmpty()) {
-                    String[] listaEventos = dados[5].split(",");
-                    
-                    for (String strEvento : listaEventos) {
-                        strEvento = strEvento.trim();
-                        try {
-                            if (strEvento.startsWith("I")) {  // Parser unificado para IO e mutex
-                                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)[:\\-](\\d+)").matcher(strEvento);
-                                if (m.find()) {
-                                    int inicio    = Integer.parseInt(m.group(1));
-                                    int duracaoIO = Math.max(1, Integer.parseInt(m.group(2)));
-                                    novaTarefa.adicionarEvento(new IO(inicio, duracaoIO));
-                                }
-                            } 
-                            else if (strEvento.startsWith("ML") || strEvento.startsWith("MU")) {
-                                String[] partes           = strEvento.split(":");
-                                String   comando          = partes[0].trim(); 
-                                int      instanteRelativo = Integer.parseInt(partes[1].trim()); 
-                                boolean  isLock           = comando.startsWith("ML"); 
-                                int      mutexId          = Integer.parseInt(comando.substring(2).trim());
-                                
-                                novaTarefa.adicionarEvento(
-                                    new EventoMutex(instanteRelativo, mutexId, isLock)
-                                );
+                for (int i = 5; i < dados.length; i++) {
+                    String strEvento = dados[i].trim();
+                    if (strEvento.isEmpty()) continue;
+
+                    try {
+                        if (strEvento.startsWith("I")) {  
+                            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+)[:\\-](\\d+)").matcher(strEvento);
+                            if (m.find()) {
+                                int inicio    = Integer.parseInt(m.group(1));
+                                int duracaoIO = Math.max(1, Integer.parseInt(m.group(2)));
+                                novaTarefa.adicionarEvento(new IO(inicio, duracaoIO));
                             }
+                        } 
+                        else if (strEvento.startsWith("ML") || strEvento.startsWith("MU")) {
+                            String[] partes           = strEvento.split(":");
+                            String   comando          = partes[0].trim(); 
+                            int      instanteRelativo = Integer.parseInt(partes[1].trim()); 
+                            boolean  isLock           = comando.startsWith("ML"); 
                             
-                        } catch (Exception ex) {
-                            System.err.println("Erro ao fazer o parsing do evento [" + strEvento + "] na Tarefa " + id);
+                            // Extrai o número do Mutex (ex: "ML01" -> 1)
+                            int mutexId = Integer.parseInt(comando.substring(2).trim());
+                            
+                            novaTarefa.adicionarEvento(
+                                new EventoMutex(instanteRelativo, mutexId, isLock)
+                            );
                         }
+                        
+                    } catch (Exception ex) {
+                        System.err.println("Erro ao fazer o parsing do evento [" + strEvento + "] na Tarefa " + id);
                     }
                 }
                 sistema.adicionarTarefa(novaTarefa); 

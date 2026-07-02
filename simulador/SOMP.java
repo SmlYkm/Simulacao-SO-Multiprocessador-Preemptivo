@@ -109,7 +109,7 @@ public class SOMP {
             boolean foiBloqueada       = false;
             int     tempoJaExecutado   = proxima.getTempoExecucao() - proxima.getTempoRestante();
             List<Evento> eventosDoTick = proxima.getEventosNoTempoRelativo(tempoJaExecutado);
-
+            List<Evento> eventosProcessados = new ArrayList<>(); // Lista para armazenar eventos processados
             for (Evento ev : eventosDoTick) {
                 if (ev instanceof EventoMutex) {
                     EventoMutex evMutex = (EventoMutex) ev;
@@ -135,7 +135,7 @@ public class SOMP {
                             foiBloqueada = true;
                             break; 
                         }
-                    } else { 
+                    } else { //MU UNLOCK
                         if (
                             m.getDonoAtual() != null && m.getDonoAtual().getId() == proxima.getId()
                         ) {
