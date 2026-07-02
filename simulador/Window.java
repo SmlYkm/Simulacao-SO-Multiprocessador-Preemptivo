@@ -297,19 +297,20 @@ public class Window extends JFrame {
                         g2.setColor(Color.BLACK);
                         g2.fillRect(x, y + 5, TICK_WIDTH, 30);
                         
-                    } else if (reg.estado == Tarefa.Estado.Bloqueado) { // IO -> laranja
+                    } else if (reg.estado == Tarefa.Estado.Bloqueado) { // IO
+                        desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(255, 165, 0));  // Usa um fundo de listras laranjas/amarelas
                         g2.setColor(Color.ORANGE);
-                        g2.fillRect(x, y + 5, TICK_WIDTH, 30);
+                        g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1); // Borda
                         
-                        g2.setColor(Color.WHITE); 
-                        g2.setFont(new Font("Arial", Font.BOLD, 10));
+                        g2.setColor(Color.BLACK); 
+                        g2.setFont(new Font("Arial", Font.BOLD, 9));
                         g2.drawString("I/O", x + 3, y + 25);
 
-                    } else if (reg.estado == Tarefa.Estado.EsperandoMutex) { 
-                        // Cor laranja/avermelhada quadriculada para espera de Mutex
+                    } else if (reg.estado == Tarefa.Estado.EsperandoMutex) {  // Cor laranja/avermelhada quadriculada para espera de Mutex
                         desenharPreenchimentoQuadriculado(g2, x, y + 5, TICK_WIDTH, 30, new Color(255, 165, 0));
                         g2.setColor(new Color(255, 140, 0)); 
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
+
                     }else if (reg.estado == Tarefa.Estado.Esperando) { 
                         desenharListrasHorizontais(g2, x, y + 5, TICK_WIDTH, 30, new Color(180, 180, 180));
                         g2.setColor(new Color(200, 200, 200)); 
@@ -321,7 +322,6 @@ public class Window extends JFrame {
                         g2.drawRect(x, y + 5, TICK_WIDTH - 1, 30 - 1);
                     }
                     
-
                     if (reg.ocorreuSorteio) { 
                         g2.setColor(Color.RED);
                         g2.fillOval(x + TICK_WIDTH - 12, y + 3, 10, 10);
