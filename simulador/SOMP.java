@@ -128,7 +128,7 @@ public class SOMP {
 
         escalonador.prepararFila(processadores);  
 
-        List<Tarefa> topTarefas = new ArrayList<>();  // Processamento Dinâmico, Lógica Mutex Unificada
+        List<Tarefa> topTarefas = new ArrayList<>();  // Processamento Dinamico
         
         while (topTarefas.size() < processadores.length) {
             Tarefa proxima = escalonador.obterProximaTarefa();
@@ -282,13 +282,13 @@ public class SOMP {
         if (tempoAtual <= 0) return;
         --tempoAtual; 
 
-        // 1. Limpa qualquer interrupção (IRQ) pendente gerada no tick que estamos apagando
+        // Limpa qualquer interrupção (IRQ) pendente gerada no tick que estamos apagando
         filaIRQ.clear();
 
         for (Tarefa t : listaTarefasGeral) {
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
-            // --- REVERSÃO DE I/O ---
+            // --- REVERSAO DE I/O ---
             if (reg.estado == Tarefa.Estado.Bloqueado) {
                 t.stepBackIO(); // Delega para a Tarefa a missão de recuar seu próprio I/O
             }
@@ -297,8 +297,6 @@ public class SOMP {
             if (reg.estado == Tarefa.Estado.EsperandoMutex) {
                 Tarefa.TickSnapshot regAnterior = t.getRegistroNoTempo(tempoAtual - 1);
                 
-                // A MÁGICA AQUI 1: Só tira da fila se no tick anterior ela NÃO estava esperando.
-                // Ou seja, recuamos exatamente para o momento em que ela deu de cara na porta.
                 if (regAnterior == null || regAnterior.estado != Tarefa.Estado.EsperandoMutex) {
                     int tempoRelativo = t.getTempoExecucao() - t.getTempoRestante();
                     List<Evento> eventos = t.getEventosNoTempoRelativo(tempoRelativo);
@@ -312,7 +310,7 @@ public class SOMP {
                 }
             }
 
-            // --- REVERSÃO DA CPU E LOCKS/UNLOCKS ---
+            // --- REVERSAO DA CPU E LOCKS/UNLOCKS ---
             if (reg.estado == Tarefa.Estado.Executando) {
                 int tempoJaExecutado = t.getTempoExecucao() - t.getTempoRestante();
                 
@@ -355,7 +353,7 @@ public class SOMP {
                 }
             }
 
-            // --- REVERSÃO DE FINALIZAÇÃO (Unlocks automáticos) ---
+            // --- REVERSÃO DE FINALIZAÇAO (Unlocks automaticos) ---
             if (reg.estado == Tarefa.Estado.Finalizado) {
                 Tarefa.TickSnapshot regAnterior = t.getRegistroNoTempo(tempoAtual - 1);
                 if (regAnterior != null && regAnterior.estado == Tarefa.Estado.Executando) {
@@ -400,7 +398,7 @@ public class SOMP {
             cpu.resetTicksNoQuantum(); 
         }
 
-        // Restaura o Estado Físico Anterior
+        // Restaura o estado anterior
         if (tempoAtual > 0) {
             int tickanterior = tempoAtual - 1;
             for (Tarefa t : listaTarefasGeral) {
