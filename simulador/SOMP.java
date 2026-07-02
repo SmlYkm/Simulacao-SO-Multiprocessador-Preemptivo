@@ -282,29 +282,135 @@ public class SOMP {
         if (tempoAtual <= 0) return;
         --tempoAtual; 
 
+        // 1. Limpa qualquer interrupção (IRQ) pendente gerada no tick que estamos apagando
+        filaIRQ.clear();
+
         for (Tarefa t : listaTarefasGeral) {
             Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tempoAtual);
             
+            // --- REVERSÃO DE I/O ---
+            if (reg.estado == Tarefa.Estado.Bloqueado) {
+                t.stepBackIO(); // Delega para a Tarefa a missão de recuar seu próprio I/O
+            }
+
+            // --- REVERSÃO DE ESPERA DE MUTEX ---
+            if (reg.estado == Tarefa.Estado.EsperandoMutex) {
+                Tarefa.TickSnapshot regAnterior = t.getRegistroNoTempo(tempoAtual - 1);
+                
+                // A MÁGICA AQUI 1: Só tira da fila se no tick anterior ela NÃO estava esperando.
+                // Ou seja, recuamos exatamente para o momento em que ela deu de cara na porta.
+                if (regAnterior == null || regAnterior.estado != Tarefa.Estado.EsperandoMutex) {
+                    int tempoRelativo = t.getTempoExecucao() - t.getTempoRestante();
+                    List<Evento> eventos = t.getEventosNoTempoRelativo(tempoRelativo);
+                    for (Evento ev : eventos) {
+                        if (ev instanceof EventoMutex && ((EventoMutex) ev).isLock()) {
+                            Mutex m = getMutex(((EventoMutex) ev).getMutexId());
+                            m.getFilaDeEspera().remove(t);
+                            t.setEsperandoMutex(false);
+                        }
+                    }
+                }
+            }
+
+            // --- REVERSÃO DA CPU E LOCKS/UNLOCKS ---
             if (reg.estado == Tarefa.Estado.Executando) {
+                int tempoJaExecutado = t.getTempoExecucao() - t.getTempoRestante();
+                
                 t.setTempoRestante(t.getTempoRestante() + 1); 
                 t.setFinalizada(false); 
+                
+                List<Evento> eventos = t.getEventosNoTempoRelativo(tempoJaExecutado);
+                for (Evento ev : eventos) {
+                    if (ev instanceof EventoMutex) {
+                        EventoMutex evMutex = (EventoMutex) ev;
+                        if (evMutex.isProcessado()) {
+                            evMutex.setProcessado(false); 
+                            Mutex m = getMutex(evMutex.getMutexId());
+                            
+                            if (evMutex.isLock()) {
+                                if (m.getDonoAtual() != null && m.getDonoAtual().getId() == t.getId()) 
+                                    m.setDonoAtual(null); 
+                            } else {
+                                Tarefa donoInvasor = m.getDonoAtual();
+                                if (donoInvasor != null && donoInvasor.getId() != t.getId()) {
+                                    donoInvasor.setEsperandoMutex(true);
+                                    
+                                    // A MÁGICA AQUI 2: Devolver a tarefa para o INÍCIO da fila
+                                    if (m.getFilaDeEspera() instanceof java.util.LinkedList) {
+                                        ((java.util.LinkedList<Tarefa>) m.getFilaDeEspera()).addFirst(donoInvasor);
+                                    } else if (m.getFilaDeEspera() instanceof java.util.Deque) {
+                                        ((java.util.Deque<Tarefa>) m.getFilaDeEspera()).addFirst(donoInvasor);
+                                    } else {
+                                        // Backup genérico caso a fila não seja Deque/LinkedList
+                                        List<Tarefa> temp = new ArrayList<>(m.getFilaDeEspera());
+                                        m.getFilaDeEspera().clear();
+                                        m.getFilaDeEspera().add(donoInvasor);
+                                        m.getFilaDeEspera().addAll(temp);
+                                    }
+                                }
+                                m.setDonoAtual(t); 
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- REVERSÃO DE FINALIZAÇÃO (Unlocks automáticos) ---
+            if (reg.estado == Tarefa.Estado.Finalizado) {
+                Tarefa.TickSnapshot regAnterior = t.getRegistroNoTempo(tempoAtual - 1);
+                if (regAnterior != null && regAnterior.estado == Tarefa.Estado.Executando) {
+                    int tempoRelativo = t.getTempoExecucao() - t.getTempoRestante(); 
+                    List<Evento> eventosFinais = t.getEventosNoTempoRelativo(tempoRelativo);
+                    for (Evento ev : eventosFinais) {
+                        if (ev instanceof EventoMutex) {
+                            EventoMutex evMutex = (EventoMutex) ev;
+                            if (evMutex.isProcessado() && !evMutex.isLock()) {
+                                evMutex.setProcessado(false);
+                                Mutex m = getMutex(evMutex.getMutexId());
+                                Tarefa donoInvasor = m.getDonoAtual();
+                                if (donoInvasor != null && donoInvasor.getId() != t.getId()) {
+                                    donoInvasor.setEsperandoMutex(true);
+                                    
+                                    // Repete a lógica de devolver ao INÍCIO da fila aqui
+                                    if (m.getFilaDeEspera() instanceof java.util.LinkedList) {
+                                        ((java.util.LinkedList<Tarefa>) m.getFilaDeEspera()).addFirst(donoInvasor);
+                                    } else if (m.getFilaDeEspera() instanceof java.util.Deque) {
+                                        ((java.util.Deque<Tarefa>) m.getFilaDeEspera()).addFirst(donoInvasor);
+                                    } else {
+                                        List<Tarefa> temp = new ArrayList<>(m.getFilaDeEspera());
+                                        m.getFilaDeEspera().clear();
+                                        m.getFilaDeEspera().add(donoInvasor);
+                                        m.getFilaDeEspera().addAll(temp);
+                                    }
+                                }
+                                m.setDonoAtual(t);
+                            }
+                        }
+                    }
+                }
             }
             
             t.apagarRegistroNoTempo(tempoAtual);
         }
 
+        // Restaura as CPUs
         for (Processador cpu : processadores) {
             cpu.apagarRegistroOciosidade(tempoAtual); 
             cpu.setTarefaAtual(null);
             cpu.resetTicksNoQuantum(); 
         }
 
-        if(tempoAtual > 0) {
+        // Restaura o Estado Físico Anterior
+        if (tempoAtual > 0) {
             int tickanterior = tempoAtual - 1;
             for (Tarefa t : listaTarefasGeral) {
                 t.restaurarEnvelhecimento(tickanterior);
 
                 Tarefa.TickSnapshot reg = t.getRegistroNoTempo(tickanterior);
+                
+                // Sincroniza a flag de Espera baseada no estado passado
+                t.setEsperandoMutex(reg.estado == Tarefa.Estado.EsperandoMutex);
+
                 if (reg.estado == Tarefa.Estado.Executando) {
                     Processador cpu = processadores[reg.cpuId];
                     cpu.setTarefaAtual(t); 
@@ -320,6 +426,11 @@ public class SOMP {
                     }
                     cpu.setTicksNoQuantum(contagemQuantum);
                 }
+            }
+        } else {
+            // Se voltou para o tick 0, garante que ninguém está esperando Mutex
+            for (Tarefa t : listaTarefasGeral) {
+                t.setEsperandoMutex(false);
             }
         }
     }

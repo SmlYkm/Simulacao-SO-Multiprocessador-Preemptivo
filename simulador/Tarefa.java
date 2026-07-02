@@ -356,4 +356,21 @@ public class Tarefa {
         }
         return null;
     }
+
+    public void stepBackIO() {
+        if (this.eventos == null) return; // Use o nome correto da sua lista de eventos
+        
+        // Percorremos a lista de trás para frente para encontrar o último I/O que progrediu
+        for (int i = eventos.size() - 1; i >= 0; i--) {
+            Evento ev = eventos.get(i);
+            if (ev instanceof IO) {
+                IO io = (IO) ev;
+                // Se o I/O já começou a ser executado, nós recuamos e paramos a busca
+                if (io.getTempoExecutado() > 0) {
+                    io.stepBack();
+                    break; 
+                }
+            }
+        }
+    }
 }
