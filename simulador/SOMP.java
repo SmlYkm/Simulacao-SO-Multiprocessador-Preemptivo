@@ -78,6 +78,35 @@ public class SOMP {
         }
         filaIRQ.clear();                                   
 
+        for (Tarefa t : listaTarefasGeral) {
+            if (t.isFinalizada()) {
+                int tempoJaExecutado       = t.getTempoExecucao() - t.getTempoRestante();  // Como terminou, tempoJaExecutado é igual à duração total da tarefa
+                List<Evento> eventosFinais = t.getEventosNoTempoRelativo(tempoJaExecutado);
+
+                for (Evento ev : eventosFinais) {
+                    if (ev instanceof EventoMutex) {
+                        EventoMutex evMutex = (EventoMutex) ev;
+                        
+                        if (!evMutex.isProcessado() && !evMutex.isLock()) {  // Se for um evento de Liberação (MU) e ainda não foi processado
+                            Mutex m = getMutex(evMutex.getMutexId());
+                            
+                            if (m.getDonoAtual() != null && m.getDonoAtual().getId() == t.getId()) {  // Se a tarefa morta for a dona do Mutex, libera a chave
+                                m.setDonoAtual(null);
+                                evMutex.setProcessado(true);
+                                System.out.println("Tick " + tempoAtual + ": Tarefa T" + t.getId() + " liberou Mutex " + m.getId() + " ao finalizar.");
+
+                                if (!m.getFilaDeEspera().isEmpty()) {  // Acorda imediatamente a próxima tarefa da fila do Mutex
+                                    Tarefa liberada = m.getFilaDeEspera().poll();
+                                    liberada.setEsperandoMutex(false);
+                                    m.setDonoAtual(liberada);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         escalonador.limparFila();             // Reconstruir a fila
         for (Tarefa t : listaTarefasGeral) {  // Só entra na CPU se não está finalizada, suspensa, esperando Mutex OU bloqueada por IO
             if (t.getTempoChegada() <= tempoAtual && !t.isFinalizada() && !t.isSuspensa() && !t.isEsperandoMutex() && !t.isBloqueada())

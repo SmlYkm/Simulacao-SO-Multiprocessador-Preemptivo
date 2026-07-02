@@ -62,12 +62,14 @@ public class LeitorConfig {
                 if (linha.trim().isEmpty()) 
                     continue; 
 
-                String[] dados              = linha.split(";");
-                int      id                 = Integer.parseInt(dados[0].trim());
-                String   cor                = dados[1].trim();
-                int      ingresso           = Integer.parseInt(dados[2].trim());
-                int      duracao            = Integer.parseInt(dados[3].trim());
-                int      prioridadeEstatica = Integer.parseInt(dados[4].trim());
+                String[] dados = linha.split(";");
+                
+                // Remove qualquer caractere que não seja número 
+                int    id                 = Integer.parseInt(dados[0].replaceAll("\\D+", "")); 
+                String cor                = dados[1].trim();
+                int    ingresso           = Integer.parseInt(dados[2].trim());
+                int    duracao            = Integer.parseInt(dados[3].trim());
+                int    prioridadeEstatica = Integer.parseInt(dados[4].trim());
 
                 Tarefa novaTarefa = new Tarefa(
                     id, cor, ingresso, duracao, prioridadeEstatica, null
@@ -75,7 +77,14 @@ public class LeitorConfig {
 
                 for (int i = 5; i < dados.length; i++) {
                     String strEvento = dados[i].trim();
+<<<<<<< HEAD
                     if (strEvento.isEmpty()) continue;
+=======
+                    
+                    if (strEvento.isEmpty()) {
+                        continue;
+                    }
+>>>>>>> 07c576a848852d457ce8a343478eee35566f824d
 
                     try {
                         if (strEvento.startsWith("I")) {  
@@ -87,6 +96,7 @@ public class LeitorConfig {
                             }
                         } 
                         else if (strEvento.startsWith("ML") || strEvento.startsWith("MU")) {
+<<<<<<< HEAD
                             String[] partes           = strEvento.split(":");
                             String   comando          = partes[0].trim(); 
                             int      instanteRelativo = Integer.parseInt(partes[1].trim()); 
@@ -95,15 +105,27 @@ public class LeitorConfig {
                             // Extrai o número do Mutex (ex: "ML01" -> 1)
                             int mutexId = Integer.parseInt(comando.substring(2).trim());
                             
+=======
+                            String[] partes = strEvento.split(":");
+                            String comando  = partes[0].trim(); 
+                            int instanteRelativo = Integer.parseInt(partes[1].trim()); 
+                            boolean isLock  = comando.startsWith("ML"); 
+                            int mutexId     = Integer.parseInt(comando.substring(2).trim());
+                            
+>>>>>>> 07c576a848852d457ce8a343478eee35566f824d
                             novaTarefa.adicionarEvento(
                                 new EventoMutex(instanteRelativo, mutexId, isLock)
                             );
                         }
+<<<<<<< HEAD
                         
+=======
+>>>>>>> 07c576a848852d457ce8a343478eee35566f824d
                     } catch (Exception ex) {
                         System.err.println("Erro ao fazer o parsing do evento [" + strEvento + "] na Tarefa " + id);
                     }
                 }
+                
                 sistema.adicionarTarefa(novaTarefa); 
             }
 
@@ -112,6 +134,7 @@ public class LeitorConfig {
             sistema = new SOMP(new EscalonadorSRTF(), 2); 
             sistema.adicionarTarefa(new Tarefa(1, "FF0000", 0, 5, 1, null)); 
             sistema.adicionarTarefa(new Tarefa(2, "0000FF", 2, 3, 2, null)); 
+        
         }
 
         return sistema;
